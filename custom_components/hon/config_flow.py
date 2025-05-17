@@ -8,7 +8,8 @@ from .const import DOMAIN, CONF_ID_TOKEN, CONF_FRAMEWORK, CONF_COGNITO_TOKEN, CO
 class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Gérer le flux de configuration pour l'intégration hOn."""
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
+    # Note: CONNECTION_CLASS est déprécié dans les versions récentes de Home Assistant
+    # et devrait être remplacé par l'attribut 'config_entry' dans les plateformes
 
     def __init__(self):
         """Initialiser."""
