@@ -1,59 +1,53 @@
-
-import logging
+from homeassistant import config_entries
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 import voluptuous as vol
 
 from .hon import HonConnection
-from typing import Any
-
-from homeassistant import config_entries
-
-from homeassistant.config_entries import (
-    SOURCE_REAUTH,
-    SOURCE_RECONFIGURE,
-    ConfigFlow,
-    ConfigFlowResult,
-    CONN_CLASS_LOCAL_POLL,
-)
-
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import callback
-
 from .const import DOMAIN, CONF_ID_TOKEN, CONF_FRAMEWORK, CONF_COGNITO_TOKEN, CONF_REFRESH_TOKEN
 
-_LOGGER = logging.getLogger(__name__)
-
-
 class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow."""
-
+    """Gérer le flux de configuration pour l'intégration hOn."""
     VERSION = 1
-    CONNECTION_CLASS = CONN_CLASS_LOCAL_POLL
+    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self):
-        self._email     = None
-        self._password  = None
+        """Initialiser."""
+        self._email = None
+        self._password = None
 
     async def async_step_user(self, user_input=None):
-        """Handle a flow initiated by the user."""
+        """Gérer une étape initiée par l'utilisateur."""
         errors = {}
 
         if user_input is None:
-            return self.async_show_form(step_id="user",data_schema=vol.Schema({vol.Required(CONF_EMAIL): str,vol.Required(CONF_PASSWORD): str}))
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema({
+                    vol.Required(CONF_EMAIL): str,
+                    vol.Required(CONF_PASSWORD): str
+                })
+            )
 
-        self._email     = user_input[CONF_EMAIL]
-        self._password  = user_input[CONF_PASSWORD]
+        self._email = user_input[CONF_EMAIL]
+        self._password = user_input[CONF_PASSWORD]
 
-        # Check if already configured
+        # Vérifier si déjà configuré
         await self.async_set_unique_id(self._email)
         self._abort_if_unique_id_configured()
 
-        # Test connection
+        # Tester la connexion
         hon = HonConnection(None, None, self._email, self._password)
-        if( await hon.async_authorize() == False ):
-            errors = {}
+        if await hon.async_authorize() == False:
             errors["base"] = "auth_error"
             await hon.async_close()
-            return self.async_show_form(step_id="user",data_schema=vol.Schema({vol.Required(CONF_EMAIL): str,vol.Required(CONF_PASSWORD): str}), errors=errors)
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema({
+                    vol.Required(CONF_EMAIL): str,
+                    vol.Required(CONF_PASSWORD): str
+                }),
+                errors=errors
+            )
         await hon.async_close()
 
         return self.async_create_entry(
@@ -69,55 +63,30 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_import(self, user_input=None):
-        """Import a config entry."""
+        """Importer une entrée de configuration."""
         return await self.async_step_user(user_input)
 
-    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Handle the reconfiguration flow."""
-        #errors = {}
-        #reconfig_entry = self._get_reconfigure_entry()
-
+    async def async_step_reconfigure(self, user_input=None):
+        """Gérer la reconfiguration."""
         if user_input is not None:
-            #reconfigure_entry = self._get_reconfigure_entry()
-            #self._email = reconfigure_entry.data[CONF_EMAIL]
             entry_id = self.context["entry_id"]
-            #_LOGGER.error(f"entry_id: {entry_id}")
-            #_LOGGER.error(self.context)
-
-            # TODO: process user input
-            #self.async_set_unique_id(self._email)
-            #self._abort_if_unique_id_mismatch()
-
             config_entry = self.hass.config_entries.async_get_entry(entry_id)
-                
-            # Test connection
+            
+            # Tester la connexion
             hon = HonConnection(None, None, config_entry.unique_id, user_input[CONF_PASSWORD])
-            if( await hon.async_authorize() == False ):
+            if await hon.async_authorize() == False:
                 errors = {}
                 errors["base"] = "auth_error"
                 await hon.async_close()
-                return self.async_show_form(step_id="reconfigure",data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}), errors=errors)
+                return self.async_show_form(
+                    step_id="reconfigure",
+                    data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}), 
+                    errors=errors
+                )
             await hon.async_close()
 
             await self.async_set_unique_id(config_entry.unique_id)
 
-            
-            # Update the entry and reload without using `_get_reconfigure_entry()`
-            #self.hass.config_entries.async_update_entry(
-            #    config_entry,
-            #    data={
-            #        CONF_EMAIL: config_entry.unique_id,
-            #        CONF_PASSWORD: user_input[CONF_PASSWORD],
-            #        CONF_ID_TOKEN: "",
-            #        CONF_FRAMEWORK: "none",
-            #        CONF_COGNITO_TOKEN: "",
-            #        CONF_REFRESH_TOKEN: ""
-            #    },
-            #)
-            #await self.hass.config_entries.async_reload(entry_id)
-            #return self.async_abort(reason="reconfigure_successful")
-
-            #self._abort_if_unique_id_mismatch()
             return self.async_update_reload_and_abort(
                 entry=config_entry,
                 unique_id=config_entry.unique_id,
