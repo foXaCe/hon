@@ -1,11 +1,3 @@
-"""
-Fichier: custom_components/hon/parameter.py
-
-Modifications principales:
-1. Ajout d'un mécanisme de cache pour les valeurs énumérées
-2. Optimisation des conversions de types
-"""
-
 #All credits to https://github.com/Andre0512/pyhOn
 
 import logging
@@ -102,28 +94,15 @@ class HonParameterRange(HonParameter):
 
     @value.setter
     def value(self, value):
-        """Définit la valeur avec conversion optimisée des types"""
-        if isinstance(value, str):
-            if isinstance(self._step, float):
-                try:
-                    value = float(value.replace(",","."))
-                except ValueError:
-                    raise ValueError(f"Key [{self.key}] Invalid value [{value}] - Cannot convert to float")
-            else:
-                try:
-                    value = int(float(value.replace(",",".")))
-                except ValueError:
-                    raise ValueError(f"Key [{self.key}] Invalid value [{value}] - Cannot convert to int")
+        if type(value) == str and type(self._step) == float:
+            value = float(value.replace(",","."))
+        elif type(value) == str:
+            value = int(float(value.replace(",",".")))
 
-        # Vérification de la validité de la valeur
-        if self._min <= value <= self._max:
-            # Vérification de l'étape uniquement si value n'est pas égal aux limites
-            # (pour permettre les valeurs min et max même si elles ne correspondent pas exactement à un multiple de step)
-            if value == self._min or value == self._max or value % self._step == 0:
-                self._value = value
-                return
-        
-        raise ValueError(f"Key [{self.key}] Value [{value}] - Allowed: min {self._min} max {self._max} step {self._step}")
+        if self._min <= value <= self._max and not value % self._step:
+            self._value = value
+        else:
+            raise ValueError(f"Key [{self.key}] Value [{value}] - Allowed: min {self._min} max {self._max} step {self._step}")
 
 
 class HonParameterEnum(HonParameter):
@@ -132,7 +111,6 @@ class HonParameterEnum(HonParameter):
         self._default = attributes.get("defaultValue")
         self._value = self._default or "0"
         self._values = attributes.get("enumValues")
-        self._values_cache = None  # Cache pour les valeurs triées
 
     def __repr__(self):
         return f"{self.__class__} (<{self.key}> {self.values})"
@@ -146,10 +124,7 @@ class HonParameterEnum(HonParameter):
 
     @property
     def values(self):
-        """Retourne les valeurs triées avec mise en cache"""
-        if self._values_cache is None:
-            self._values_cache = sorted([str(value) for value in self._values])
-        return self._values_cache
+        return sorted([str(value) for value in self._values])
 
     @property
     def valuesBase(self):
@@ -161,12 +136,8 @@ class HonParameterEnum(HonParameter):
 
     @value.setter
     def value(self, value):
-        """Définit la valeur avec vérification optimisée"""
-        # Convertir en chaîne si ce n'est pas déjà le cas
-        str_value = str(value)
-        
-        if str_value in self.values:
-            self._value = str_value
+        if value in self.values:
+            self._value = value
         else:
             raise ValueError(f"ParameterEnum [{self.key}] Invalid value: {value} Allowed values: {self.values}")
 

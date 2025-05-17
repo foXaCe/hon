@@ -1,11 +1,3 @@
-"""
-Fichier: custom_components/hon/const.py
-
-Modifications principales:
-1. Ajout de constantes pour la gestion des sessions
-2. Optimisation des définitions
-"""
-
 """hOn component constants."""
 
 from enum import Enum, IntEnum
@@ -29,12 +21,6 @@ CONF_ID_TOKEN = "token"
 CONF_COGNITO_TOKEN = "cognito_token"
 CONF_REFRESH_TOKEN = "refresh_token"
 CONF_FRAMEWORK = "framework"
-
-# Nouvelles constantes pour la gestion des sessions et le cache
-SESSION_TIMEOUT = 21600  # 6 heures session
-SESSION_PROACTIVE_REFRESH = 300  # Rafraîchir 5 minutes avant l'expiration
-CONTEXT_CACHE_TIMEOUT = 10  # Durée de validité du cache de contexte en secondes
-STATISTICS_CACHE_TIMEOUT = 300  # Durée de validité du cache de statistiques en secondes
 
 PLATFORMS = [
     "climate", 
@@ -118,3 +104,34 @@ class ClimateEcoPilotMode:
     OFF = "0"
     AVOID = "1"
     FOLLOW = "2"
+
+
+#WASHING_MACHINE_DOOR_LOCK_STATUS = {
+#    "1": "Locked",
+#    "0": "Unlocked"
+#}
+
+#WASHING_MACHINE_PROGRAM = {
+#    "0": { 
+#        "name": "fragile",
+#        "spinSpeed": "400",
+#        "temp": "30",
+#        "rinseIterations": "1",
+#        "mainWashTime": "10",
+#        "autoSoftenerStatus": "1"
+#                },
+#    "1": { 
+#        "name": "quotidien sale",
+#        "spinSpeed": "1400",
+#        "temp": "40",
+#        "rinseIterations": "2",
+#        "mainWashTime": "15",
+#        "autoSoftenerStatus": "1"
+#                },
+#}
+
+#PURIFIER_LIGHT_VALUE  = {
+#    "0": "Off",
+#    "1": "50%",
+#    "2": "100%"
+#}

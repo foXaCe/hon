@@ -30,9 +30,6 @@ class HonDevice(CoordinatorEntity):
         self._appliance_model       = {}
         self._attributes            = {}
         self._statistics            = {}
-        self._commands_loaded       = False
-        self._context_loaded        = False
-        self._statistics_loaded     = False
 
 
     def __getitem__(self, item):
@@ -72,16 +69,7 @@ class HonDevice(CoordinatorEntity):
         return float(self.get(item,0))
 
     def has(self, item, default=None):
-        """Vérifie si une propriété est disponible sans la charger"""
-        # Vérifier dans les données déjà chargées
-        if self.get(item) is not None:
-            return True
-            
-        # Si le contexte a été chargé, vérifier dans les paramètres
-        if self._context_loaded and "parameters" in self._attributes:
-            return item in self._attributes["parameters"]
-            
-        return False
+        return self.get(item) != None
 
     def getProgramName(self):
         try:
@@ -94,13 +82,11 @@ class HonDevice(CoordinatorEntity):
             return None
 
     async def load_context(self):
-        """Charge le contexte de l'appareil si nécessaire"""
-        if not self._context_loaded:
-            data = await self._hon.async_get_context(self)
-            self._attributes = data
-            for name, values in self._attributes.pop("shadow", {'NA': 0}).get("parameters", {}).items():
-                self._attributes.setdefault("parameters", {})[name] = values["parNewVal"]
-            self._context_loaded = True
+        data = await self._hon.async_get_context(self)
+        #_LOGGER.warning(data)
+        self._attributes = data
+        for name, values in self._attributes.pop("shadow", {'NA': 0}).get("parameters").items():
+            self._attributes.setdefault("parameters", {})[name] = values["parNewVal"]
 
     @property
     def data(self):
@@ -132,10 +118,6 @@ class HonDevice(CoordinatorEntity):
     
     @property
     def attributes(self):
-        """Retourne les attributs et charge le contexte si nécessaire"""
-        if not self._attributes and not self._context_loaded:
-            # Ne pas charger automatiquement le contexte, juste retourner un dict vide
-            return {"parameters": {}}
         return self._attributes
 
     @property
@@ -175,56 +157,43 @@ class HonDevice(CoordinatorEntity):
                     command.parameters.get(key).value = parameters.get(key)
 
     def settings_command(self, parameters = {}):
-        """Retourne une commande pour mettre à jour les paramètres de l'appareil"""
-        # Charger les commandes si nécessaire
-        if not self._commands_loaded or "settings" not in self._commands:
+        if( "settings" not in self._commands ):
             raise ValueError("No command to update settings of the device")
-            
         command = self._commands.get("settings")
         self.update_command(command, self.attributes["parameters"])
         self.update_command(command, parameters)
 
-        # Mise à jour pour la prochaine commande (au cas où aucun rafraîchissement n'a encore lieu)
+        # Update for next command (in case no refresh happens yet)
         for key in command.parameters.keys():
             self.attributes["parameters"][key] = command.parameters.get(key).value
 
         return command
 
     def start_command(self, program = None, parameters = {}):
-        """Prépare une commande pour démarrer un programme"""
-        # Charger les commandes si nécessaire
-        if not self._commands_loaded or "startProgram" not in self._commands:
+        if( "startProgram" not in self._commands ):
             raise ValueError("No command to start the device")
-            
         command = self._commands.get("startProgram")
         command.set_program(program)
-        # Récupérer la nouvelle commande par défaut
+        # Return the new default command
         command = self._commands.get("startProgram")
         self.update_command(command, self.attributes["parameters"])
         self.update_command(command, parameters)
     
-        # Mise à jour pour la prochaine commande (au cas où aucun rafraîchissement n'a encore lieu)
+        # Update for next command (in case no refresh happens yet)
         for key in command.parameters.keys():
             self.attributes["parameters"][key] = command.parameters.get(key).value
 
         return command
 
     def stop_command(self, parameters = {}):
-        """Prépare une commande pour arrêter un programme"""
-        # Charger les commandes si nécessaire
-        if not self._commands_loaded or "stopProgram" not in self._commands:
-            raise ValueError("No command to stop the device")
-            
-        command = self._commands.get("stopProgram")
-        self.update_command(command, self.attributes["parameters"])
-        self.update_command(command, parameters)
-        return command
+        if( "stopProgram" in self._commands ):
+            command = self._commands.get("stopProgram")
+            self.update_command(command, self.attributes["parameters"])
+            self.update_command(command, parameters)
+            return command
+        raise ValueError("No command to stop the device")
 
     async def load_commands(self):
-        """Charge les commandes de l'appareil"""
-        if self._commands_loaded:
-            return
-            
         commands = await self._hon.load_commands(self._appliance)
     
         try:
@@ -234,8 +203,7 @@ class HonDevice(CoordinatorEntity):
             return
 
         for item in ["options", "dictionaryId"]:
-            if item in commands:
-                commands.pop(item)
+            commands.pop(item)
 
         for command, attr in commands.items():
             if "parameters" in attr:
@@ -249,26 +217,9 @@ class HonDevice(CoordinatorEntity):
                     cmd = HonCommand(command, attr2, self._hon, self, multi=multi, program=program)
                     multi[program] = cmd
                     self._commands[command] = cmd
-                    
-        self._commands_loaded = True
-        _LOGGER.debug(f"Commands loaded for device {self._mac}")
-
-    async def load_commands_if_needed(self):
-        """Charge les commandes si nécessaire"""
-        if not self._commands_loaded:
-            await self.load_commands()
 
     async def load_statistics(self):
-        """Charge les statistiques de l'appareil"""
-        if not self._statistics_loaded:
-            self._statistics = await self._hon.load_statistics(self)
-            self._statistics_loaded = True
-            _LOGGER.debug(f"Statistics loaded for device {self._mac}")
-
-    async def load_statistics_if_needed(self):
-        """Charge les statistiques si nécessaire"""
-        if not self._statistics_loaded:
-            await self.load_statistics()
+        self._statistics = await self._hon.load_statistics(self)
 
     @property
     def device_info(self):

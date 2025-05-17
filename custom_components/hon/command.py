@@ -1,11 +1,48 @@
-"""
-Suite du fichier: custom_components/hon/command.py
-"""
-                value for name, parameter in self._parameters.items()}
-                return await self._connector.send_command(self._device, self._name, parameters, self.ancillary_parameters)
-            except Exception as retry_err:
-                _LOGGER.error(f"Failed retry for command {self._name} after reconnection: {retry_err}")
-                return False
+#All credits to https://github.com/Andre0512/pyhOn
+from .parameter import HonParameterFixed, HonParameterEnum, HonParameterRange, HonParameterProgram
+
+import logging
+_LOGGER = logging.getLogger(__name__)
+
+class HonCommand:
+    def __init__(self, name, attributes, connector, device, multi=None, program=""):
+        self._connector = connector
+        self._device = device
+        self._name = name
+        self._multi = multi or {}
+        self._program = program
+        self._description = attributes.get("description", "")
+        self._parameters = self._create_parameters(attributes.get("parameters", {}))
+        self._ancillary_parameters = self._create_parameters(attributes.get("ancillaryParameters", {}))
+
+    def __repr__(self):
+        return f"{self._name} command"
+
+    def _create_parameters(self, parameters):
+        result = {}
+        for parameter, attributes in parameters.items():
+            match attributes.get("typology"):
+                case "range":
+                    result[parameter] = HonParameterRange(parameter, attributes)
+                case "enum":
+                    result[parameter] = HonParameterEnum(parameter, attributes)
+                case "fixed":
+                    result[parameter] = HonParameterFixed(parameter, attributes)
+        if self._multi:
+            result["program"] = HonParameterProgram("program", self)
+        return result
+
+    @property
+    def parameters(self):
+        return self._parameters
+
+    @property
+    def ancillary_parameters(self):
+        return {key: parameter.value for key, parameter in self._ancillary_parameters.items()}
+
+    async def send(self):
+        parameters = {name: parameter.value for name, parameter in self._parameters.items()}
+        return await self._connector.send_command(self._device, self._name, parameters, self.ancillary_parameters)
 
     def get_programs(self):
         return self._multi
@@ -26,17 +63,10 @@ Suite du fichier: custom_components/hon/command.py
 
     @property
     def setting_keys(self):
-        """Obtient les clés de paramètres avec mise en cache"""
-        if self._settings_keys_cache is not None:
-            return self._settings_keys_cache
-            
         if not self._multi:
-            self._settings_keys_cache = self._get_settings_keys()
-            return self._settings_keys_cache
-            
+            return self._get_settings_keys()
         result = [key for cmd in self._multi.values() for key in self._get_settings_keys(cmd)]
-        self._settings_keys_cache = list(set(result + ["program"]))
-        return self._settings_keys_cache
+        return list(set(result + ["program"]))
 
     @property
     def settings(self):
@@ -44,7 +74,6 @@ Suite du fichier: custom_components/hon/command.py
         return {s: self._parameters.get(s) for s in self.setting_keys if self._parameters.get(s) is not None}
 
     def dump(self):
-        """Génère le texte et l'exemple pour l'affichage des commandes"""
         text = ""
         example = "{"
         for key, parameter in self._parameters.items():

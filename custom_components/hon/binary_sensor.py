@@ -1,11 +1,3 @@
-"""
-Fichier: custom_components/hon/binary_sensor.py
-
-Modifications principales:
-1. Optimisation du chargement des entités
-2. Chargement différé des appareils si nécessaire
-"""
-
 import logging
 import asyncio
 import json
@@ -29,34 +21,14 @@ from homeassistant.components.binary_sensor import (
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> None:
-    """Configurer les binary_sensors après avoir chargé une entrée."""
-    start_time = asyncio.get_event_loop().time()
-    
+
     hon = hass.data[DOMAIN][entry.unique_id]
-    
-    # Charger les appareils si nécessaire
-    await hon.load_appliances_if_needed()
-    
+
     appliances = []
     for appliance in hon.appliances:
-        # Éviter de configurer à nouveau des appareils déjà configurés
-        mac = appliance.get("macAddress", "")
-        if mac in hon.configured_devices:
-            continue
-            
-        coordinator = await hon.async_get_coordinator(appliance)
-        if not coordinator:
-            continue
-            
-        device = coordinator.device
 
-        # Charger les commandes ici plutôt que dans __init__.py pour paralléliser
-        if not hasattr(device, '_commands_loaded') or not device._commands_loaded:
-            try:
-                await device.load_commands()
-            except Exception as e:
-                _LOGGER.error(f"Failed to load commands for device {mac}: {e}")
-                continue
+        coordinator = await hon.async_get_coordinator(appliance)
+        device = coordinator.device
 
         # Every device should have a OnOff status
         appliances.extend([HonBaseOnOff(hass, coordinator, entry, appliance)])
@@ -95,11 +67,7 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
         if device.has("healthMode"):
             appliances.extend([HonBaseHealthMode(hass, coordinator, entry, appliance)])
 
-    if appliances:
-        async_add_entities(appliances)
-        
-    end_time = asyncio.get_event_loop().time()
-    _LOGGER.debug(f"binary_sensor setup took {end_time - start_time:.2f} seconds")
+    async_add_entities(appliances)
 
 
 
@@ -109,12 +77,6 @@ class HonBaseGenericStatus(HonBaseBinarySensorEntity):
         self._attr_device_class = device_class
 
 
-
-class HonBaseOnOff(HonBaseBinarySensorEntity):
-    def __init__(self, hass, coordinator, entry, appliance) -> None:
-        super().__init__(coordinator, appliance, "onOffStatus", "Status")
-
-        self._attr_device_class = BinarySensorDeviceClass
 
 class HonBaseOnOff(HonBaseBinarySensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
