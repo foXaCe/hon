@@ -114,6 +114,12 @@ class HonBaseOnOff(HonBaseBinarySensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
         super().__init__(coordinator, appliance, "onOffStatus", "Status")
 
+        self._attr_device_class = BinarySensorDeviceClass
+
+class HonBaseOnOff(HonBaseBinarySensorEntity):
+    def __init__(self, hass, coordinator, entry, appliance) -> None:
+        super().__init__(coordinator, appliance, "onOffStatus", "Status")
+
         self._attr_device_class = BinarySensorDeviceClass.POWER
 
     def coordinator_update(self):
