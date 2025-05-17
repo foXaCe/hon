@@ -1,4 +1,13 @@
+"""
+Fichier: custom_components/hon/button.py
+
+Modifications principales:
+1. Optimisation du chargement des entités
+2. Mesure de performance
+"""
+
 import logging
+import asyncio
 from .const import DOMAIN
 from homeassistant.config_entries import ConfigEntry
 
@@ -10,18 +19,44 @@ from homeassistant.helpers.template import device_id as get_device_id
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> None:
+    """Configurer les boutons après avoir chargé une entrée."""
+    start_time = asyncio.get_event_loop().time()
 
     hon = hass.data[DOMAIN][entry.unique_id]
+    
+    # Charger les appareils si nécessaire
+    await hon.load_appliances_if_needed()
 
     appliances = []
     for appliance in hon.appliances:
-
+        # Éviter de configurer à nouveau des appareils déjà configurés
+        mac = appliance.get("macAddress", "")
+        if mac in hon.configured_devices:
+            continue
+            
         coordinator = await hon.async_get_coordinator(appliance)
+        if not coordinator:
+            continue
+            
         device = coordinator.device
+        
+        # Charger les commandes ici si nécessaire
+        if not hasattr(device, '_commands_loaded') or not device._commands_loaded:
+            try:
+                await device.load_commands()
+            except Exception as e:
+                _LOGGER.error(f"Failed to load commands for device {mac}: {e}")
+                continue
+                
         appliances.extend([HonBaseButtonEntity(coordinator, appliance)])
-        if( "settings" in device.commands ):
+        if "settings" in device.commands:
             appliances.extend([HonBaseSettingsButtonEntity(coordinator, appliance)])
-    async_add_entities(appliances)
+    
+    if appliances:
+        async_add_entities(appliances)
+        
+    end_time = asyncio.get_event_loop().time()
+    _LOGGER.debug(f"button setup took {end_time - start_time:.2f} seconds")
 
 
 
@@ -40,6 +75,10 @@ class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
+        # Vérifiez que les commandes sont chargées
+        if not self._device.commands or not "startProgram" in self._device.commands:
+            await self._device.load_commands()
+            
         command = self._device.commands.get("startProgram")
         programs = command.get_programs()
         device_id = get_device_id(self._coordinator.hass, self.entity_id)
@@ -86,6 +125,10 @@ class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
+        # Vérifiez que les commandes sont chargées
+        if not self._device.commands or not "settings" in self._device.commands:
+            await self._device.load_commands()
+            
         device_id = get_device_id(self._coordinator.hass, self.entity_id)
         command = self._device.commands.get("settings")
         alert_text, example = command.dump()
@@ -101,4 +144,3 @@ class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
       device_id: {device_id}
 """
         create(self._coordinator.hass, text, "Get all settings")
-
