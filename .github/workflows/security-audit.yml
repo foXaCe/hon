@@ -31,7 +31,7 @@ jobs:
           cache: pip
 
       - name: Install pip-audit
-        run: pipx install pip-audit
+        run: python3 -m pip install --quiet pip-audit
 
       - name: Audit manifest.json (HA integration requirements)
         run: |
@@ -56,6 +56,7 @@ jobs:
         with:
           scan-args: |
             --recursive
+            --config=osv-scanner.toml
             ./
 
   secret-scan:

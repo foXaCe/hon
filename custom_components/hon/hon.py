@@ -205,11 +205,7 @@ class HonConnection:
             url, params=params, headers=self._headers
         ) as response:
             data = await response.json()
-            _LOGGER.debug(
-                "Context fetched for mac[%s] type [%s]",
-                device.mac_address,
-                device.appliance_type,
-            )
+            _LOGGER.debug("Context fetched for device type [%s]", device.appliance_type)
             return data.get("payload", {})
 
     async def load_statistics(self, device):
@@ -223,9 +219,7 @@ class HonConnection:
         ) as response:
             data = await response.json()
             _LOGGER.debug(
-                "Statistics fetched for mac[%s] type [%s]",
-                device.mac_address,
-                device.appliance_type,
+                "Statistics fetched for device type [%s]", device.appliance_type
             )
             return data.get("payload", {})
 

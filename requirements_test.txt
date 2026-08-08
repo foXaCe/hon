@@ -1,2 +1,3 @@
 pytest-homeassistant-custom-component==0.13.355
 syrupy==5.5.3
+cryptography>=49.0.0
