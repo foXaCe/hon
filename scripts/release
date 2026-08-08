@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Les releases sont gérées par release-please (workflow .github/workflows/release.yml)."
+echo "Mergez la Release PR ouverte par le bot pour publier une version."

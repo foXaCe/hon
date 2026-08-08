@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Lance HA en mode debug (port 8123)..."
+python3 -m homeassistant --debug -c config
