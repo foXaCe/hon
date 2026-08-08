@@ -33,7 +33,8 @@
     },
     "error": {
       "invalid_auth": "La tentative de connexion a échoué. Vérifiez vos identifiants.",
-      "cannot_connect": "Impossible de se connecter au cloud hOn."
+      "cannot_connect": "Impossible de se connecter au cloud hOn.",
+      "password_change_required": "Changement de mot de passe requis. Réinitialisez d'abord votre mot de passe sur l'application hOn."
     },
     "abort": {
       "reauth_successful": "Réauthentification réussie",

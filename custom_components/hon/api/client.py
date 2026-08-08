@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
-import json
+import json as json_module
 import logging
 import secrets
 import time
@@ -36,7 +36,12 @@ from ..const import (
     OS_VERSION,
 )
 from ..coordinator import HonBaseCoordinator
-from .exceptions import HonAuthenticationError, HonConnectionError, HonRateLimitError
+from .exceptions import (
+    HonAuthenticationError,
+    HonConnectionError,
+    HonPasswordChangeRequiredError,
+    HonRateLimitError,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -156,11 +161,13 @@ class HonConnection:
         params: dict[str, Any] | None = None,
         json: Any | None = None,
         headers: dict[str, str] | None = None,
+        return_text: bool = False,
         retries: int = MAX_RETRIES,
     ) -> dict[str, Any]:
         """Perform a request with timeout, backoff and token refresh.
 
-        Returns the JSON body of a successful (2xx) response.
+        Returns the JSON body of a successful (2xx) response, or the raw text
+        when ``return_text`` is set.
         """
         session = self._session_provider
         attempt = 0
@@ -189,7 +196,11 @@ class HonConnection:
                         raise HonRateLimitError("hOn API rate limit reached")
                     if response.status >= 400:
                         raise HonConnectionError(f"hOn API returned {response.status}")
+                    if return_text:
+                        return {"_text": await response.text()}
                     return await response.json()
+            except (aiohttp.ContentTypeError, json_module.JSONDecodeError):
+                raise
             except (aiohttp.ClientError, TimeoutError) as err:
                 if attempt > retries:
                     raise HonConnectionError(f"Request failed: {err}") from err
@@ -226,9 +237,24 @@ class HonConnection:
             "password": self._password,
             "code_challenge": code_challenge,
         }
-        json_data = await self._async_request(
-            "GET", f"{API_URL}/ciam/authorize", params=params
-        )
+        try:
+            json_data = await self._async_request(
+                "GET", f"{API_URL}/ciam/authorize", params=params
+            )
+        except (aiohttp.ContentTypeError, json_module.JSONDecodeError):
+            # The cloud may reply with a "ChangePassword" HTML page instead of
+            # JSON when the credentials are valid but a password reset is
+            # mandatory. Surface that as a dedicated error.
+            text = await self._async_request(
+                "GET", f"{API_URL}/ciam/authorize", params=params, return_text=True
+            )
+            if "ChangePassword" in text.get("_text", ""):
+                raise HonPasswordChangeRequiredError(
+                    "Password change required on the hOn account"
+                ) from None
+            raise HonConnectionError(
+                "Unable to connect to the CIAM authorize service"
+            ) from None
         session_id = json_data.get("session_id")
         if not session_id:
             _LOGGER.error("Unable to get [session_id] - check your email/password")
@@ -287,14 +313,24 @@ class HonConnection:
             "fwVersion": appliance["fwVersion"],
             "os": OS,
             "appVersion": APP_VERSION,
-            "series": appliance["series"],
+            "series": appliance.get("series", ""),
         }
         url = f"{API_URL}/commands/v1/retrieve"
         json_data = await self._async_request(
             "GET", url, params=params, headers=self._headers
         )
         result = json_data.get("payload", {})
-        if not result or result.pop("resultCode") != "0":
+        if not result:
+            # Appliance without a command set (e.g. a TV): the cloud returns an
+            # empty payload. Expected — let the caller skip command setup.
+            return {}
+        result_code = result.pop("resultCode", None)
+        if result_code != "0":
+            _LOGGER.warning(
+                "Command retrieve returned resultCode %s for %s",
+                result_code,
+                appliance.get("macAddress"),
+            )
             return {}
         _LOGGER.debug("Commands loaded: %d entries", len(result))
         return result
@@ -375,7 +411,7 @@ class HonConnection:
                 headers=self._headers,
                 json=command,
             )
-        except (json.JSONDecodeError, HonConnectionError):
+        except (json_module.JSONDecodeError, HonConnectionError):
             _LOGGER.error("hOn Invalid Data after sending command")
             return False
         _LOGGER.debug(
@@ -419,6 +455,14 @@ class HonConnection:
             "parameters": parameters,
             "applianceType": device.appliance_type,
         }
+        # The cloud expects the resolved programName for startProgram commands
+        # (the bare `program` parameter is no longer enough for some families).
+        if (
+            command == "startProgram"
+            and device.appliance_type in ("WM", "WD")
+            and (program := parameters.get("program"))
+        ):
+            payload["programName"] = f"PROGRAMS.WM_WD.{program.upper()}"
         _LOGGER.debug(
             "Command sent (send_command): mac=%s type=%s cmd=%s",
             device.mac_address,
@@ -433,7 +477,7 @@ class HonConnection:
                 headers=self._headers,
                 json=payload,
             )
-        except (json.JSONDecodeError, HonConnectionError):
+        except (json_module.JSONDecodeError, HonConnectionError):
             _LOGGER.error("hOn Invalid Data after sending command")
             return False
         _LOGGER.debug(

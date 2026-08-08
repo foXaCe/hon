@@ -33,7 +33,8 @@
     },
     "error": {
       "invalid_auth": "Your login attempt has failed. Check your credentials.",
-      "cannot_connect": "Unable to connect to the hOn cloud."
+      "cannot_connect": "Unable to connect to the hOn cloud.",
+      "password_change_required": "Password change required. Reset your password on the hOn app first."
     },
     "abort": {
       "reauth_successful": "Reauthentication successful",

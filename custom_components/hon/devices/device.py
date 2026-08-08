@@ -299,7 +299,9 @@ class HonDevice(CoordinatorEntity):
             command.set_program(program)
         # Return the new default command
         command = self._commands.get("startProgram")
-        self.update_command(command, self.attributes.get("parameters", {}))
+        current_parameters = dict(self.attributes.get("parameters", {}))
+        current_parameters.pop("program", None)
+        self.update_command(command, current_parameters)
         self.update_command(command, parameters)
 
         # Update for next command (in case no refresh happens yet)
@@ -339,11 +341,22 @@ class HonDevice(CoordinatorEntity):
         """Load the command catalogue from the cloud."""
         commands = await self._hon.load_commands(self._appliance)
 
+        if not commands:
+            # Some appliances (e.g. a Haier TV) legitimately return no command
+            # set. That is a normal state, not an error worth alarming about.
+            _LOGGER.debug(
+                "No command set returned for %s (type %s); skipping command setup.",
+                self._name,
+                self._type_name,
+            )
+            return
+
         try:
             self._appliance_model = commands.pop("applianceModel")
-        except:
+        except KeyError:
             _LOGGER.error(
-                f"Unable to load device commands. Please try to restart. Current value: [{commands}]"
+                "Unable to load device commands. Please try to restart. Current value: [%s]",
+                commands,
             )
             return
 

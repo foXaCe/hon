@@ -13,6 +13,7 @@ from custom_components.hon.api.client import HonConnection, get_hOn_mac
 from custom_components.hon.api.exceptions import (
     HonAuthenticationError,
     HonConnectionError,
+    HonPasswordChangeRequiredError,
     HonRateLimitError,
 )
 from custom_components.hon.const import CONF_UPDATE_INTERVAL, DOMAIN
@@ -43,6 +44,24 @@ class FakeResponse:
 
     async def json(self) -> Any:
         return self._json_data
+
+
+class FakeTextResponse(FakeResponse):
+    """A response that raises on json() and exposes raw text.
+
+    Models the hOn ``ChangePassword`` HTML redirect that the authorize step
+    can return instead of JSON.
+    """
+
+    def __init__(self, status: int, text: str) -> None:
+        super().__init__(status, None)
+        self._text = text
+
+    async def json(self) -> Any:
+        raise aiohttp.ContentTypeError(None, ()) from None
+
+    async def text(self) -> str:
+        return self._text
 
 
 class FakeSession:
@@ -154,6 +173,16 @@ async def test_async_authorize_missing_session_id() -> None:
     """A response without a session id means invalid credentials."""
     connection = make_connection([FakeResponse(200, {"error": "nope"})])
     with pytest.raises(HonAuthenticationError):
+        await connection.async_authorize()
+
+
+async def test_async_authorize_password_change_required() -> None:
+    """A ChangePassword HTML reply raises the dedicated error."""
+    html = FakeTextResponse(200, "<html>ChangePassword</html>")
+    connection = make_connection(
+        [html, FakeTextResponse(200, "<html>ChangePassword</html>")]
+    )
+    with pytest.raises(HonPasswordChangeRequiredError):
         await connection.async_authorize()
 
 
@@ -273,6 +302,17 @@ async def test_load_commands_empty_payload() -> None:
     """A missing payload yields an empty dict."""
     connection = make_connection([FakeResponse(200, {})])
     assert await connection.load_commands(build_appliance()) == {}
+
+
+async def test_load_commands_missing_series() -> None:
+    """An appliance without a series field does not raise a KeyError."""
+    connection = make_connection(
+        [FakeResponse(200, {"payload": {"resultCode": "0", "applianceModel": {}}})]
+    )
+    appliance = build_appliance()
+    appliance.pop("series", None)
+    result = await connection.load_commands(appliance)
+    assert result == {"applianceModel": {}}
 
 
 async def test_async_get_context() -> None:

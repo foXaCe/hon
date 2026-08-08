@@ -20,6 +20,7 @@ from .api.client import HonConnection
 from .api.exceptions import (
     HonAuthenticationError,
     HonConnectionError,
+    HonPasswordChangeRequiredError,
     HonRateLimitError,
 )
 from .const import (
@@ -100,6 +101,8 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 errors=errors,
             )
+        except HonPasswordChangeRequiredError:
+            errors["base"] = "password_change_required"
         except HonAuthenticationError:
             errors["base"] = "invalid_auth"
             return self.async_show_form(
@@ -162,6 +165,8 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
                     errors=errors,
                 )
+            except HonPasswordChangeRequiredError:
+                errors["base"] = "password_change_required"
             except HonAuthenticationError:
                 errors["base"] = "invalid_auth"
                 return self.async_show_form(
@@ -217,6 +222,14 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             ):
                 errors = {}
                 errors["base"] = "cannot_connect"
+                return self.async_show_form(
+                    step_id="reconfigure",
+                    data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
+                    errors=errors,
+                )
+            except HonPasswordChangeRequiredError:
+                errors = {}
+                errors["base"] = "password_change_required"
                 return self.async_show_form(
                     step_id="reconfigure",
                     data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
