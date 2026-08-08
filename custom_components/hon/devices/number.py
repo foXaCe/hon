@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import logging
-import re
 
-from homeassistant.components.number import NumberEntity
+from homeassistant.components.number import NumberEntity, NumberEntityDescription
 from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import APPLIANCE_DEFAULT_NAME, DOMAIN
 from ..parameter import HonParameterRange
+from .base import HonBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,47 +43,22 @@ default_values = {
 }
 
 
-class HonBaseNumberEntity(CoordinatorEntity, NumberEntity):
+class HonBaseNumberEntity(HonBaseEntity, NumberEntity):
+    """Base number entity."""
+
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, appliance, key, sensor_name) -> None:
-        super().__init__(coordinator)
-        self._coordinator = coordinator
-        self._mac = appliance["macAddress"]
-        self._type_id = appliance["applianceTypeId"]
-        self._name = appliance.get(
-            "nickName",
-            APPLIANCE_DEFAULT_NAME.get(
-                str(self._type_id), "Device ID: " + str(self._type_id)
-            ),
-        )
-        self._brand = appliance["brand"]
-        self._model = appliance["modelName"]
-        self._fw_version = appliance["fwVersion"]
-        self._type_name = appliance["applianceTypeName"]
+        """Initialize the number entity."""
+        super().__init__(coordinator, appliance)
         self._key = key
-        self._device = coordinator.device
-
-        # Generate unique ID from key
-        key_formatted = re.sub(r"(?<!^)(?=[A-Z])", "_", key).lower()
-        if len(key_formatted) <= 0:
-            key_formatted = re.sub(r"(?<!^)(?=[A-Z])", "_", sensor_name).lower()
-        self._attr_unique_id = self._mac + "_" + key_formatted
-
-        self._attr_name = self._name + " " + sensor_name
+        self._attr_unique_id = self._unique_id_from_key(key, sensor_name)
+        self._attr_name = sensor_name
         self.coordinator_update()
-
-    @property
-    def device_info(self):
-        return {
-            "identifiers": {(DOMAIN, self._mac, self._type_name)},
-            "name": self._name,
-            "manufacturer": self._brand,
-            "model": self._model,
-            "sw_version": self._fw_version,
-        }
 
     @callback
     def _handle_coordinator_update(self):
-        if self._coordinator.data is False:
+        if not self.available:
             return
         self.coordinator_update()
         self.async_write_ha_state()
@@ -94,19 +68,15 @@ class HonBaseNumberEntity(CoordinatorEntity, NumberEntity):
 
 
 class HonNumber(HonBaseNumberEntity):
-    _attr_has_entity_name = False
+    """Number entity bound to a settings parameter."""
 
     def __init__(self, hon, coordinator, appliance, description) -> None:
+        """Initialize the number entity."""
         super().__init__(coordinator, appliance, description.key, description.name)
-
-        self._coordinator = coordinator
-        self._device = coordinator.device
         self.entity_description = description
-
-        # param_display = description.key.replace("startProgram.", "").replace("tempSelZ", "Zone ")
-        # self._attr_name = f"{self._name} {param_display}"
-        # _LOGGER.error(self._attr_name)
-        self._attr_unique_id = f"{self._mac}-number-{description.key}"
+        self._attr_unique_id = (
+            f"{coordinator.unique_id_prefix}-number-{description.key}"
+        )
 
     def _get_setting(self):
         return self._device.get_setting(self.entity_description.key)
@@ -125,13 +95,8 @@ class HonNumber(HonBaseNumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         command_name, parameter_name = self.entity_description.key.split(".", 1)
-        if command_name == "settings":
-            command = self._device.settings_command({parameter_name: value})
-            await command.send()
-            await self.coordinator.async_request_refresh()
-            return
-
-        self._device.start_command(parameters={parameter_name: value})
+        command = self._device.start_command(parameters={parameter_name: value})
+        await command.send()
         self.coordinator.async_set_updated_data({})
 
     @callback

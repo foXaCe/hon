@@ -6,7 +6,7 @@ import voluptuous as vol
 from dateutil.tz import gettz
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
@@ -47,7 +47,7 @@ def update_sensor(hass, device_id, mac, sensor_name, state):
 
     # Loop over all entries and update the good one
     for entry in entries:
-        if entry.unique_id == mac + "_" + sensor_name:
+        if entry.unique_id.endswith("_" + mac + "_" + sensor_name):
             inputStateObject = hass.states.get(entry.entity_id)
             hass.states.async_set(entry.entity_id, state, inputStateObject.attributes)
 
@@ -76,6 +76,34 @@ def get_device_ids(hass, call):
             device_ids.add(entry.device_id)
 
     return list(device_ids)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
+    """Migrate a config entry to a newer version.
+
+    Version 2 prefixes every entity unique id with ``{entry.unique_id}_`` so
+    that ids are namespaced per config entry (Quality Scale Gold format).
+    """
+    if entry.version != 1:
+        return True
+
+    _LOGGER.info(
+        "Migrating %s config entry from version %s", entry.title, entry.version
+    )
+
+    registry = er.async_get(hass)
+    uid_prefix = f"{entry.unique_id}_"
+
+    @callback
+    def update_unique_id(entity_entry: er.RegistryEntry) -> dict[str, str] | None:
+        if entity_entry.unique_id.startswith(uid_prefix):
+            return None
+        return {"new_unique_id": f"{uid_prefix}{entity_entry.unique_id}"}
+
+    await er.async_migrate_entries(hass, entry.entry_id, update_unique_id)
+    hass.config_entries.async_update_entry(entry, version=2)
+    _LOGGER.info("Migrated %s config entry to version 2", entry.title)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:

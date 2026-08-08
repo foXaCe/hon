@@ -106,6 +106,11 @@ class HonConnection:
         """Return the appliances owned by the account."""
         return self._appliances
 
+    @property
+    def entry(self) -> Any | None:
+        """Return the config entry this connection belongs to."""
+        return self._entry
+
     async def async_get_existing_coordinator(
         self, mac: str
     ) -> HonBaseCoordinator | None:

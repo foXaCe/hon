@@ -22,10 +22,16 @@ CONF_FRAMEWORK = "framework"
 CONF_UPDATE_INTERVAL = "update_interval"
 DEFAULT_SCAN_INTERVAL = 60
 
-PLATFORMS = ["climate", "water_heater", "sensor", "binary_sensor", "button", "switch"]
-
-"""     "number",
-    "select", """
+PLATFORMS = [
+    "climate",
+    "water_heater",
+    "sensor",
+    "binary_sensor",
+    "button",
+    "switch",
+    "number",
+    "select",
+]
 
 
 AUTH_API = "https://account2.hon-smarthome.com/SmartHome"

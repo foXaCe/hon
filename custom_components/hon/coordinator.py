@@ -55,6 +55,13 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
         """Return the device managed by this coordinator."""
         return self._device
 
+    @property
+    def unique_id_prefix(self) -> str:
+        """Return the stable per-entry prefix for entity unique ids."""
+        if self._hon.entry is not None and self._hon.entry.unique_id:
+            return f"{self._hon.entry.unique_id}_{self._device.mac_address}"
+        return self._device.mac_address
+
     async def _async_setup(self) -> None:
         """Load commands and statistics once before the first refresh."""
         await self._device.load_commands()

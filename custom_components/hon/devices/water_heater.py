@@ -54,7 +54,7 @@ class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
         self._model = appliance["modelName"]
         self._type_name = appliance["applianceTypeName"]
         self._fw_version = appliance["fwVersion"]
-        self._unique_id = f"{self._mac}_water_heater"
+        self._unique_id = f"{coordinator.unique_id_prefix}_water_heater"
         self._device = coordinator.device
         self._watcher = None
 

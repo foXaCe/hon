@@ -8,7 +8,7 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.core import callback
 
 from ..parameter import HonParameterEnum, HonParameterFixed, HonParameterProgram
-from .device import HonDevice
+from .base import HonBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,12 +25,19 @@ default_values = {
 }
 
 
-class HonSelect(HonDevice, SelectEntity):
+class HonSelect(HonBaseEntity, SelectEntity):
+    """Select entity bound to an enum setting parameter."""
+
+    _attr_has_entity_name = True
+
     def __init__(self, hon, coordinator, appliance, description) -> None:
-        super().__init__(hon, coordinator, appliance)
-        self._device = coordinator.device
+        """Initialize the select entity."""
+        super().__init__(coordinator, appliance)
         self.entity_description = description
-        self._attr_unique_id = f"{self._mac}-select-{description.key}"
+        self._attr_name = description.name
+        self._attr_unique_id = (
+            f"{coordinator.unique_id_prefix}-select-{description.key}"
+        )
         self._refresh_options()
 
     def _get_setting(self):
@@ -64,13 +71,16 @@ class HonSelect(HonDevice, SelectEntity):
             return
 
         if parameter_name == "program":
-            self._device.start_command(program=option)
+            command = self._device.start_command(program=option)
         else:
-            self._device.start_command(parameters={parameter_name: option})
+            command = self._device.start_command(parameters={parameter_name: option})
+        await command.send()
         self.coordinator.async_set_updated_data({})
 
     @callback
     def _handle_coordinator_update(self):
+        if not self.available:
+            return
         setting = self._get_setting()
         self._refresh_options()
         self._attr_current_option = None if setting is None else setting.value

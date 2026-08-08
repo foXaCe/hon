@@ -14,8 +14,8 @@ class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
         self._coordinator = coordinator
         self._device = coordinator.device
 
-        self._attr_unique_id = self._device.mac_address + "_start_button"
-        self._attr_name = self._device.name + " Get programs details"
+        self._attr_unique_id = f"{coordinator.unique_id_prefix}_start_button"
+        self._attr_name = "Get programs details"
 
     @property
     def device_info(self):
@@ -63,8 +63,8 @@ class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
         self._coordinator = coordinator
         self._device = coordinator.device
 
-        self._attr_unique_id = self._device.mac_address + "_settings_button"
-        self._attr_name = self._device.name + " Get settings details"
+        self._attr_unique_id = f"{coordinator.unique_id_prefix}_settings_button"
+        self._attr_name = "Get settings details"
 
     @property
     def device_info(self):

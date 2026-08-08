@@ -33,7 +33,7 @@ _LOGGER = logging.getLogger(__name__)
 class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
 
-    VERSION = 1
+    VERSION = 2
     CONNECTION_CLASS = CONN_CLASS_LOCAL_POLL
 
     def __init__(self):

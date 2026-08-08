@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 class HonBaseEntity(CoordinatorEntity[HonBaseCoordinator]):
     """Common behaviour for every hOn entity."""
 
-    _attr_has_entity_name = False
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -50,13 +50,18 @@ class HonBaseEntity(CoordinatorEntity[HonBaseCoordinator]):
             "sw_version": self._fw_version,
         }
         self._name = self._attr_device_info["name"]
+        self._uid_prefix = coordinator.unique_id_prefix
 
     def _unique_id_from_key(self, key: str, fallback: str = "") -> str:
-        """Build the unique id from a camelCase API key."""
+        """Build the unique id from a camelCase API key.
+
+        Format: ``{entry_unique_id}_{mac}_{key}`` — stable across reloads and
+        namespaced per config entry.
+        """
         key_formatted = snake_case(key)
         if not key_formatted:
             key_formatted = snake_case(fallback)
-        return f"{self._mac}_{key_formatted}"
+        return f"{self._uid_prefix}_{key_formatted}"
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -84,7 +89,7 @@ class HonBaseBinarySensorEntity(HonBaseEntity, BinarySensorEntity):
         super().__init__(coordinator, appliance)
         self._key = key
         self._attr_unique_id = self._unique_id_from_key(key, sensor_name)
-        self._attr_name = f"{self._name} {sensor_name}"
+        self._attr_name = sensor_name
         self.coordinator_update()
 
     def coordinator_update(self) -> None:
@@ -105,7 +110,7 @@ class HonBaseSensorEntity(HonBaseEntity, SensorEntity):
         super().__init__(coordinator, appliance)
         self._key = key
         self._attr_unique_id = self._unique_id_from_key(key, sensor_name)
-        self._attr_name = f"{self._name} {sensor_name}"
+        self._attr_name = sensor_name
         self.coordinator_update()
 
     def coordinator_update(self) -> None:
@@ -127,7 +132,7 @@ class HonBaseSwitchEntity(HonBaseEntity, SwitchEntity):
         self.entity_description = entity_description
         self.translation_key = entity_description.translation_key
         self._attr_unique_id = self._unique_id_from_key(entity_description.key)
-        self._attr_name = f"{self._name} {entity_description.name}"
+        self._attr_name = entity_description.name
         self.coordinator_update()
 
     def coordinator_update(self) -> None:

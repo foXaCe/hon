@@ -55,7 +55,7 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
         self._type_name = appliance["applianceTypeName"]
         self._serialNumber = appliance["serialNumber"]
         self._fwVersion = appliance["fwVersion"]
-        self._unique_id = f"{self._mac}"
+        self._unique_id = f"{coordinator.unique_id_prefix}_climate"
         self._available = True
         self._watcher = None
         self._device = coordinator.device
