@@ -117,6 +117,10 @@ This integration has been tested with the following devices.
 
 - Haier Monobloc GT R290
 
+## Credits
+
+This integration is based on the original work of gvigroux. Thanks to him for his contribution to the Home Assistant hOn community.
+
 ## Troubleshooting
 
 Enable debug logging for the integration:
