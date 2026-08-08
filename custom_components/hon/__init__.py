@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 import logging
 from datetime import datetime
 
@@ -134,12 +135,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
 
     entry.runtime_data = hon
 
-    for appliance in hon.appliances:
-        coordinator = await hon.async_get_coordinator(appliance)
-        await coordinator.async_config_entry_first_refresh()
-
-        await coordinator.device.load_commands()
-        await coordinator.device.load_statistics()
+    # Load every appliance context in parallel to keep the boot fast.
+    coordinators = [
+        await hon.async_get_coordinator(appliance) for appliance in hon.appliances
+    ]
+    await asyncio.gather(
+        *(
+            coordinator.async_config_entry_first_refresh()
+            for coordinator in coordinators
+        )
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

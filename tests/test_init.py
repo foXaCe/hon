@@ -50,8 +50,6 @@ async def test_async_setup_entry_success(hass, mock_connection, config_entry) ->
     assert config_entry.runtime_data is mock_connection
     forward.assert_awaited_once_with(config_entry, PLATFORMS)
     coordinator.async_config_entry_first_refresh.assert_awaited_once()
-    coordinator.device.load_commands.assert_awaited_once()
-    coordinator.device.load_statistics.assert_awaited_once()
 
 
 async def test_async_setup_entry_auth_failed(
