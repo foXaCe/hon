@@ -86,7 +86,7 @@ class HonBaseChildLockStatus(HonBaseBinarySensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
         super().__init__(coordinator, appliance, "lockStatus", "Child lock")
 
-        self.translation_key = "lockStatus"
+        self.translation_key = "lockstatus"
         self._attr_device_class = BinarySensorDeviceClass.LOCK
 
     def coordinator_update(self):
