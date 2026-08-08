@@ -71,19 +71,16 @@ class HonBaseProgramName(HonBaseSensorEntity):
         self._attr_icon = "mdi:playlist-play"
 
     def coordinator_update(self):
-        _LOGGER.debug(f"[{self._name}] All attributes: {self._device.attributes}")
-
         program_name = self._device.getProgramName()
-        _LOGGER.debug(f"[{self._name}] getProgramName() returned: {program_name}")
 
         if program_name:
             self._attr_native_value = program_name
             self._attr_available = True
-            _LOGGER.debug(f"[{self._name}] Program name set to: {program_name}")
+            _LOGGER.debug("[%s] Program name set to: %s", self._name, program_name)
         else:
             self._attr_native_value = "No program"
             self._attr_available = True
-            _LOGGER.debug(f"[{self._name}] Program name set to: No program")
+            _LOGGER.debug("[%s] Program name set to: No program", self._name)
 
 
 class HonBaseTemperature(HonBaseSensorEntity):

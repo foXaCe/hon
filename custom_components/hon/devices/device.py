@@ -86,7 +86,9 @@ class HonDevice(CoordinatorEntity):
                 program_name = activity.get("attributes", {}).get("programName")
                 if program_name:
                     _LOGGER.debug(
-                        f"[{self._name}] Found program name in activity.attributes: {program_name}"
+                        "[%s] Found program name in activity.attributes: %s",
+                        self._name,
+                        program_name,
                     )
                     name = program_name.lower()
                     parts = name.split(".")
@@ -98,7 +100,9 @@ class HonDevice(CoordinatorEntity):
             program_name = self._attributes.get("programName")
             if program_name:
                 _LOGGER.debug(
-                    f"[{self._name}] Found program name in attributes: {program_name}"
+                    "[%s] Found program name in attributes: %s",
+                    self._name,
+                    program_name,
                 )
                 name = program_name.lower()
                 parts = name.split(".")
@@ -113,7 +117,9 @@ class HonDevice(CoordinatorEntity):
                 program_name = command.get("programName")
                 if program_name:
                     _LOGGER.debug(
-                        f"[{self._name}] Found program name in commandHistory: {program_name}"
+                        "[%s] Found program name in commandHistory: %s",
+                        self._name,
+                        program_name,
                     )
                     name = program_name.lower()
                     parts = name.split(".")
@@ -121,10 +127,10 @@ class HonDevice(CoordinatorEntity):
                         return parts[2]
                     return name
 
-            _LOGGER.debug(f"[{self._name}] Program name not found in any location")
+            _LOGGER.debug("[%s] Program name not found in any location", self._name)
 
         except Exception as e:
-            _LOGGER.warning(f"[{self._name}] Failed to get program name: {e}")
+            _LOGGER.warning("[%s] Failed to get program name: %s", self._name, e)
 
         return None
 

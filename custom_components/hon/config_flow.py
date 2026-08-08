@@ -12,7 +12,11 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.helpers import selector
 
 from .api.client import HonConnection
-from .api.exceptions import HonAuthenticationError, HonConnectionError
+from .api.exceptions import (
+    HonAuthenticationError,
+    HonConnectionError,
+    HonRateLimitError,
+)
 from .const import (
     CONF_COGNITO_TOKEN,
     CONF_FRAMEWORK,
@@ -77,7 +81,7 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         hon = HonConnection(None, None, self._email, self._password)
         try:
             auth_ok = await hon.async_authorize()
-        except (HonConnectionError, aiohttp.ClientConnectorError):
+        except (HonConnectionError, HonRateLimitError, aiohttp.ClientConnectorError):
             errors["base"] = "cannot_connect"
             return self.async_show_form(
                 step_id="user",
@@ -140,7 +144,11 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             hon = HonConnection(None, None, entry.unique_id, user_input[CONF_PASSWORD])
             try:
                 auth_ok = await hon.async_authorize()
-            except (HonConnectionError, aiohttp.ClientConnectorError):
+            except (
+                HonConnectionError,
+                HonRateLimitError,
+                aiohttp.ClientConnectorError,
+            ):
                 errors["base"] = "cannot_connect"
                 return self.async_show_form(
                     step_id="reauth",
@@ -195,7 +203,11 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             )
             try:
                 auth_ok = await hon.async_authorize()
-            except (HonConnectionError, aiohttp.ClientConnectorError):
+            except (
+                HonConnectionError,
+                HonRateLimitError,
+                aiohttp.ClientConnectorError,
+            ):
                 errors = {}
                 errors["base"] = "cannot_connect"
                 return self.async_show_form(

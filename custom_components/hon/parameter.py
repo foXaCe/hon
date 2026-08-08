@@ -70,7 +70,6 @@ class HonParameterRange(HonParameter):
                 attributes.get("defaultValue", self._min).replace(",", ".")
             )
         self._value = self._default
-        # _LOGGER.error(f"Param {key} min {self._min} | max {self._max} | step {self._step} | default {self._default}")
 
     def __repr__(self):
         return f"{self.__class__} (<{self.key}> [{self._min} - {self._max}])"

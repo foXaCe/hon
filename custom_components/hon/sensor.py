@@ -64,23 +64,14 @@ async def async_setup_entry(
         coordinator = await hon.async_get_coordinator(appliance)
         device = coordinator.device
 
-        # DEBUG: Tüm verileri logla
-        _LOGGER.debug(f"=== Checking device: {device.name} ===")
-        _LOGGER.debug(f"Device type: {device._type_name}")
-        _LOGGER.debug(f"All attributes keys: {list(device.attributes.keys())}")
+        _LOGGER.debug("Setting up sensors for %s (%s)", device.name, device._type_name)
 
         if "commandHistory" in device.attributes:
             _LOGGER.debug(
-                f"Command History content: {device.attributes['commandHistory']}"
+                "Command History content: %s", device.attributes["commandHistory"]
             )
 
-        # Program name sensörünü her cihaz için ekle (debug için)
-        programName = device.getProgramName()
-        _LOGGER.debug(f"getProgramName() result: {programName}")
-
-        # Program name sensörünü ekle (değer None olsa bile)
         appliances.extend([HonBaseProgramName(hass, coordinator, entry, appliance)])
-        _LOGGER.debug(f"Program name sensor added for {device.name}")
 
         if device.has("machMode"):
             appliances.extend([HonBaseMode(hass, coordinator, entry, appliance)])

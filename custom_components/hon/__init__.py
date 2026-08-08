@@ -245,11 +245,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
 
         mac = get_hOn_mac(call.data.get("device"), hass)
 
-        json = await hon.async_get_state(mac, "WM")
+        coordinator = await hon.async_get_existing_coordinator(mac)
+        if (
+            coordinator is None
+            or coordinator.device.get("attributes.lastConnEvent.category")
+            == "DISCONNECTED"
+        ):
+            _LOGGER.error("This hOn device is disconnected - Mac address [%s]", mac)
+            return
 
-        if json["category"] != "DISCONNECTED":
-            return await hon.async_set(mac, "WM", parameters)
-        _LOGGER.error(f"This hOn device is disconnected - Mac address [{mac}]")
+        return await hon.async_set(mac, "WM", parameters)
 
     async def handle_purifier_start(call):
 
