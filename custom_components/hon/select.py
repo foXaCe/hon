@@ -1,27 +1,17 @@
+"""Select platform for the hOn integration."""
+
+from __future__ import annotations
+
 import logging
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.core import callback
+from homeassistant.components.select import SelectEntityDescription
 from homeassistant.helpers import translation
 from homeassistant.helpers.entity import EntityCategory
 
-from .const import DOMAIN
-from .device import HonDevice
-from .parameter import HonParameterEnum, HonParameterFixed, HonParameterProgram
+from .devices.select import HonSelect, default_values
+from .parameter import HonParameterEnum, HonParameterProgram
 
 _LOGGER = logging.getLogger(__name__)
-
-default_values = {
-    "windSpeed": {
-        "icon": "mdi:fan",
-    },
-    "windDirectionHorizontal": {
-        "icon": "mdi:swap-horizontal",
-    },
-    "windDirectionVertical": {
-        "icon": "mdi:swap-vertical",
-    },
-}
 
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
@@ -57,61 +47,3 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
             appliances.append(HonSelect(hon, coordinator, appliance, description))
 
     async_add_entities(appliances)
-
-
-class HonSelect(HonDevice, SelectEntity):
-    def __init__(self, hon, coordinator, appliance, description) -> None:
-        super().__init__(hon, coordinator, appliance)
-        self._device = coordinator.device
-        self.entity_description = description
-        self._attr_unique_id = f"{self._mac}-select-{description.key}"
-        self._refresh_options()
-
-    def _get_setting(self):
-        return self._device.get_setting(self.entity_description.key)
-
-    def _refresh_options(self):
-        setting = self._get_setting()
-        if setting is None:
-            self._attr_options = []
-        elif isinstance(setting, HonParameterFixed):
-            self._attr_options = [setting.value]
-        else:
-            self._attr_options = list(setting.values)
-
-    @property
-    def current_option(self) -> str | None:
-        setting = self._get_setting()
-        if setting is None:
-            return None
-        value = setting.value
-        if value not in self._attr_options:
-            return None
-        return value
-
-    async def async_select_option(self, option: str) -> None:
-        command_name, parameter_name = self.entity_description.key.split(".", 1)
-        if command_name == "settings":
-            command = self._device.settings_command({parameter_name: option})
-            await command.send()
-            await self.coordinator.async_request_refresh()
-            return
-
-        if parameter_name == "program":
-            self._device.start_command(program=option)
-        else:
-            self._device.start_command(parameters={parameter_name: option})
-        self.coordinator.async_set_updated_data({})
-
-    @callback
-    def _handle_coordinator_update(self):
-        setting = self._get_setting()
-        self._refresh_options()
-        self._attr_current_option = None if setting is None else setting.value
-        self.async_write_ha_state()
-
-    @property
-    def available(self) -> bool:
-        return super().available and self._device.has_current_setting(
-            self.entity_description.key
-        )

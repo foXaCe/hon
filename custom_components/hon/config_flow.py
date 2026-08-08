@@ -11,6 +11,8 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.helpers import selector
 
+from .api.client import HonConnection
+from .api.exceptions import HonAuthenticationError, HonConnectionError
 from .const import (
     CONF_COGNITO_TOKEN,
     CONF_FRAMEWORK,
@@ -20,8 +22,6 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
-from .exceptions import HonAuthenticationError, HonConnectionError
-from .hon import HonConnection
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -107,34 +107,3 @@ class ClimateEcoPilotMode:
     OFF = "0"
     AVOID = "1"
     FOLLOW = "2"
-
-
-# WASHING_MACHINE_DOOR_LOCK_STATUS = {
-#    "1": "Locked",
-#    "0": "Unlocked"
-# }
-
-# WASHING_MACHINE_PROGRAM = {
-#    "0": {
-#        "name": "fragile",
-#        "spinSpeed": "400",
-#        "temp": "30",
-#        "rinseIterations": "1",
-#        "mainWashTime": "10",
-#        "autoSoftenerStatus": "1"
-#                },
-#    "1": {
-#        "name": "quotidien sale",
-#        "spinSpeed": "1400",
-#        "temp": "40",
-#        "rinseIterations": "2",
-#        "mainWashTime": "15",
-#        "autoSoftenerStatus": "1"
-#                },
-# }
-
-# PURIFIER_LIGHT_VALUE  = {
-#    "0": "Off",
-#    "1": "50%",
-#    "2": "100%"
-# }

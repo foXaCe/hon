@@ -12,14 +12,14 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
-from .device import HonDevice
+from .devices.device import HonDevice
 
 if TYPE_CHECKING:
     from datetime import timedelta
 
     from homeassistant.core import HomeAssistant
 
-    from .hon import HonConnection
+    from .api.client import HonConnection
 
 _LOGGER = logging.getLogger(__name__)
 

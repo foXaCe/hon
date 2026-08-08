@@ -4,9 +4,9 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
 )
 
-from .command import HonCommand
-from .const import APPLIANCE_DEFAULT_NAME, DOMAIN
-from .parameter import HonParameterFixed
+from ..command import HonCommand
+from ..const import APPLIANCE_DEFAULT_NAME, DOMAIN
+from ..parameter import HonParameterFixed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -128,15 +128,6 @@ class HonDevice(CoordinatorEntity):
 
         return None
 
-    """
-    async def load_context(self):
-        data = await self._hon.async_get_context(self)
-        #_LOGGER.warning(data)
-        self._attributes = data
-        for name, values in self._attributes.pop("shadow", {'NA': 0}).get("parameters").items():
-            self._attributes.setdefault("parameters", {})[name] = values["parNewVal"]
-    """
-
     async def load_context(self):
         data = await self._hon.async_get_context(self)
         self._attributes = data or {}
@@ -221,18 +212,6 @@ class HonDevice(CoordinatorEntity):
             for key, parameter in command.parameters.items():
                 result.setdefault(name, {})[key] = parameter.value
         return result
-
-    """
-    def update_command(self, command, parameters):
-        for key in command.parameters.keys():
-            if( key in parameters
-                and command.parameters.get(key).value != parameters.get(key)
-                and not isinstance(command.parameters.get(key), HonParameterFixed)):
-
-                if( isinstance(command.parameters.get(key), HonParameterEnum) and parameters.get(key) not in command.parameters.get(key).values):
-                    _LOGGER.warning(f"Unable to update parameter [{key}] with value [{parameters.get(key)}] because not in range {command.parameters.get(key).values}. Use default instead.")
-                else:
-                    command.parameters.get(key).value = parameters.get(key) """
 
     def update_command(self, command, parameters):
         for key in command.parameters.keys():

@@ -1,19 +1,19 @@
-import logging
+"""Button platform for the hOn integration."""
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.components.persistent_notification import create
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from __future__ import annotations
 
-from .const import DOMAIN
+from typing import TYPE_CHECKING
 
-# from homeassistant.helpers.template import device_id as get_device_id
+from .devices.button import HonBaseButtonEntity, HonBaseSettingsButtonEntity
 
-_LOGGER = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
 
 
-async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> None:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+) -> None:
 
     hon = entry.runtime_data
 
@@ -25,88 +25,3 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
         if "settings" in device.commands:
             appliances.extend([HonBaseSettingsButtonEntity(coordinator, appliance)])
     async_add_entities(appliances)
-
-
-class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
-    def __init__(self, coordinator, appliance) -> None:
-        super().__init__(coordinator)
-        self._coordinator = coordinator
-        self._device = coordinator.device
-
-        self._attr_unique_id = self._device.mac_address + "_start_button"
-        self._attr_name = self._device.name + " Get programs details"
-
-    @property
-    def device_info(self):
-        return self._device.device_info
-
-    async def async_press(self) -> None:
-        """Handle the button press."""
-        command = self._device.commands.get("startProgram")
-        programs = command.get_programs()
-        # device_id = get_device_id(self._coordinator.hass, self.entity_id)
-        device_id = None
-        entry = er.async_get(self._coordinator.hass).async_get(self.entity_id)
-        if entry:
-            device_id = entry.device_id
-
-        for program in programs.keys():
-            command.set_program(program)
-            command = self._device.commands.get("startProgram")
-            alert_text, example = command.dump()
-
-            text = f"""#### Parameters:
-{alert_text}
-#### Start this program with default parameters:
-    service: hon.start_program
-    data:
-      program: {program}
-    target:
-      device_id: {device_id}
-
-#### Start this program with customized parameters:
-    service: hon.start_program
-    data:
-      program: {program}
-      parameters: >-
-        {example}
-    target:
-      device_id: {device_id}
-"""
-            create(self._coordinator.hass, text, "Program [" + program + "]")
-
-
-class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
-    def __init__(self, coordinator, appliance) -> None:
-        super().__init__(coordinator)
-        self._coordinator = coordinator
-        self._device = coordinator.device
-
-        self._attr_unique_id = self._device.mac_address + "_settings_button"
-        self._attr_name = self._device.name + " Get settings details"
-
-    @property
-    def device_info(self):
-        return self._device.device_info
-
-    async def async_press(self) -> None:
-        """Handle the button press."""
-        # device_id = get_device_id(self._coordinator.hass, self.entity_id)
-        device_id = None
-        entry = er.async_get(self._coordinator.hass).async_get(self.entity_id)
-        if entry:
-            device_id = entry.device_id
-        command = self._device.commands.get("settings")
-        alert_text, example = command.dump()
-
-        text = f"""#### Parameters:
-{alert_text}
-#### Update settings:
-    service: hon.update_settings
-    data:
-      parameters: >-
-        {example}
-    target:
-      device_id: {device_id}
-"""
-        create(self._coordinator.hass, text, "Get all settings")

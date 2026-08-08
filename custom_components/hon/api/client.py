@@ -13,7 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.helpers import device_registry as dr
 
-from .const import (
+from ..const import (
     API_URL,
     APP_VERSION,
     CONF_COGNITO_TOKEN,
@@ -30,7 +30,7 @@ from .exceptions import HonAuthenticationError, HonConnectionError
 # CIAM access tokens expire after ~15 minutes, so refresh well before that.
 SESSION_TIMEOUT = 600  # seconds
 
-from .coordinator import HonBaseCoordinator
+from ..coordinator import HonBaseCoordinator
 
 
 class HonConnection:
