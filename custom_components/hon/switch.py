@@ -38,7 +38,6 @@ async def async_setup_entry(
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("screenDisplayStatus", "N/A") != "N/A"
@@ -52,7 +51,6 @@ async def async_setup_entry(
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("muteStatus", "N/A") != "N/A"
@@ -66,7 +64,6 @@ async def async_setup_entry(
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("echoStatus", "N/A") != "N/A"
@@ -84,7 +81,6 @@ async def async_setup_entry(
                     )
                 ]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("rapidMode", "N/A") != "N/A"
@@ -98,7 +94,6 @@ async def async_setup_entry(
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("10degreeHeatingStatus", "N/A") != "N/A"
@@ -112,7 +107,6 @@ async def async_setup_entry(
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (device.get("ecoMode", "N/A") != "N/A"):
             description = HonSwitchEntityDescription(
@@ -124,7 +118,6 @@ async def async_setup_entry(
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (device.get("ecoMode", "N/A") != "N/A"):
             description = HonSwitchEntityDescription(
@@ -136,7 +129,6 @@ async def async_setup_entry(
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("healthMode", "N/A") != "N/A"
@@ -150,6 +142,5 @@ async def async_setup_entry(
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
     async_add_entities(appliances)

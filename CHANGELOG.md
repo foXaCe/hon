@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Config entry version bumped 1 → 2 (automatic migration via `async_migrate_entry`)
 - `has_entity_name = True` on all entities
 - Appliance contexts loaded in parallel at setup (boot faster than baseline)
+- Boot optimized: removed redundant per-platform refreshes (sensor 1×, switch 9×, climate re-first-refresh) and parallelized commands/statistics loading — config entry setup ~4s vs ~9s baseline
 - Shared aiohttp session, 30 s timeout, exponential backoff retry, token refresh on 401
 - `from __future__ import annotations`, strict typing, docstrings everywhere
 - English translations cleaned (broken keys, duplicate states, newline keys)

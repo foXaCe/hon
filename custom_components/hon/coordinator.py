@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -63,9 +64,15 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
         return self._device.mac_address
 
     async def _async_setup(self) -> None:
-        """Load commands and statistics once before the first refresh."""
-        await self._device.load_commands()
-        await self._device.load_statistics()
+        """Load commands and statistics once before the first refresh.
+
+        These two requests are independent, so running them concurrently
+        speeds up the boot.
+        """
+        await asyncio.gather(
+            self._device.load_commands(),
+            self._device.load_statistics(),
+        )
 
     async def _async_update_data(self) -> HonDevice:
         """Refresh the device context and return the device."""

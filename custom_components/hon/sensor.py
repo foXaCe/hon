@@ -512,6 +512,4 @@ async def async_setup_entry(
                 [HonBaseProgramsCounter(hass, coordinator, entry, appliance)]
             )
 
-        await coordinator.async_request_refresh()
-
     async_add_entities(appliances)

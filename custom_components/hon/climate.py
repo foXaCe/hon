@@ -26,7 +26,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
     for appliance in hon.appliances:
         if appliance["applianceTypeId"] == 11:
             coordinator = await hon.async_get_coordinator(appliance)
-            await coordinator.async_config_entry_first_refresh()
             appliances.append(HonClimateEntity(hass, coordinator, entry, appliance))
 
     async_add_entities(appliances)
