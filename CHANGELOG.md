@@ -16,9 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Diagnostics-ready typed exceptions (`HonAuthenticationError`, `HonConnectionError`, `HonRateLimitError`)
 - `number` and `select` platforms (were dead code) with working command sending
 - `diagnostics.py` (entry/appliance/coordinator/device/entity snapshot, secrets redacted)
+- `system_health.py` (cloud reachability, appliance count, update status)
 - Entity names fully localized (FR/EN) via `translation_key`: sensors, binary sensors, switches, buttons
 - French translations for the config flow and the options flow
-- 404 tests, 96 % coverage
+- 406 tests, 96 % coverage
 
 ### Changed
 

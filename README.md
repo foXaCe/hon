@@ -45,7 +45,11 @@ Home Assistant component supporting all devices integrated with hOn cloud. The o
 
 ## Configuration
 
-Configure the integration with your hOn username and password.
+Configure the integration with your hOn username and password (add → hOn).
+
+After setup, you can open **Options** on the config entry to adjust the polling
+interval (default 60 s, range 30–3600 s). Reauthentication is handled through
+the UI when your credentials expire.
 
 You can launch any available program by using a dedicated service: `hon.start_program`.
 To get all the details about each program, you can go to the device and click on `Get programs details`
