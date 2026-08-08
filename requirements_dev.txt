@@ -1,4 +1,4 @@
 -r requirements_test.txt
-ruff>=0.7
-mypy>=1.13
-pre-commit>=4.0
+ruff==0.16.2
+mypy==2.3.0
+pre-commit==4.6.1
