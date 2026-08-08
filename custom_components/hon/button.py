@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 from .devices.button import HonBaseButtonEntity, HonBaseSettingsButtonEntity
 
+PARALLEL_UPDATES = 0
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant

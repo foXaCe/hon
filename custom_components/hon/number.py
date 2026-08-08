@@ -13,9 +13,12 @@ from .parameter import HonParameterRange
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Set up the number platform."""
+
     hon = entry.runtime_data
     translations = await translation.async_get_translations(
         hass, hass.config.language, "entity"
