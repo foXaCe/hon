@@ -19,6 +19,9 @@ CONF_COGNITO_TOKEN = "cognito_token"
 CONF_REFRESH_TOKEN = "refresh_token"
 CONF_FRAMEWORK = "framework"
 
+CONF_UPDATE_INTERVAL = "update_interval"
+DEFAULT_SCAN_INTERVAL = 60
+
 PLATFORMS = ["climate", "water_heater", "sensor", "binary_sensor", "button", "switch"]
 
 """     "number",

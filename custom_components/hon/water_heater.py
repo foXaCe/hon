@@ -35,7 +35,7 @@ MACHMODE_TO_MODE = {machmode: name for name, (machmode, _prog) in WH_MODES.items
 
 async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> None:
 
-    hon = hass.data[DOMAIN][entry.unique_id]
+    hon = entry.runtime_data
 
     appliances = []
     for appliance in hon.appliances:

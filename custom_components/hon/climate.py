@@ -44,7 +44,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> None:
 
-    hon = hass.data[DOMAIN][entry.unique_id]
+    hon = entry.runtime_data
 
     appliances = []
     for appliance in hon.appliances:
@@ -135,7 +135,7 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
         super().__init__(coordinator)
         self._coordinator = coordinator
-        self._hon = hass.data[DOMAIN][entry.unique_id]
+        self._hon = entry.runtime_data
         self._hass = hass
         self._brand = appliance["brand"]
         self._mac = appliance["macAddress"]

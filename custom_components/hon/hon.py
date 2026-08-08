@@ -4,7 +4,7 @@ import json
 import logging
 import secrets
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import aiohttp
 
@@ -19,15 +19,18 @@ from .const import (
     CONF_COGNITO_TOKEN,
     CONF_ID_TOKEN,
     CONF_REFRESH_TOKEN,
+    CONF_UPDATE_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
     DEVICE_MODEL,
     OS,
     OS_VERSION,
 )
+from .exceptions import HonAuthenticationError, HonConnectionError
 
 # CIAM access tokens expire after ~15 minutes, so refresh well before that.
 SESSION_TIMEOUT = 600  # seconds
 
-from .base import HonBaseCoordinator
+from .coordinator import HonBaseCoordinator
 
 
 class HonConnection:
@@ -74,7 +77,15 @@ class HonConnection:
         mac = appliance.get("macAddress", "")
         if mac in self._coordinator_dict:
             return self._coordinator_dict[mac]
-        coordinator = HonBaseCoordinator(self._hass, self, appliance)
+        update_interval = self._entry.options.get(
+            CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL
+        )
+        coordinator = HonBaseCoordinator(
+            self._hass,
+            self,
+            appliance,
+            update_interval=timedelta(seconds=int(update_interval)),
+        )
         self._coordinator_dict[mac] = coordinator
         return coordinator
 
@@ -115,11 +126,13 @@ class HonConnection:
                     "Unable to connect to the CIAM authorize service: "
                     + str(resp.status)
                 )
-                return False
+                raise HonConnectionError(
+                    f"CIAM authorize service returned {resp.status}"
+                )
             session_id = (await resp.json()).get("session_id")
             if not session_id:
                 _LOGGER.error("Unable to get [session_id] - check your email/password")
-                return False
+                raise HonAuthenticationError("Invalid credentials")
 
         # 2) Exchange the session id (+ PKCE verifier) for the tokens
         async with self._session.post(
@@ -136,7 +149,7 @@ class HonConnection:
                     "Unable to get tokens from /ciam/token. Response: "
                     + await resp.text()
                 )
-                return False
+                raise HonAuthenticationError("Invalid credentials") from None
 
         # 3) Load the appliance list from the unified-api view
         url = f"{API_URL}/unified-api/v1/view/appliance-list"

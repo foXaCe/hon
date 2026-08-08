@@ -9,17 +9,24 @@ from homeassistant.const import ATTR_DEVICE_ID, CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant, ServiceCall
 
 # from homeassistant.helpers.template import device_id as get_device_id
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    HomeAssistantError,
+)
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN, PLATFORMS
-from .device import HonDevice
+from .exceptions import HonAuthenticationError, HonConnectionError
 from .hon import HonConnection, get_hOn_mac
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_REGISTRY = "service_registry"
+
+
+type HonConfigEntry = ConfigEntry[HonConnection]
 
 
 HON_SCHEMA = vol.Schema(
@@ -98,31 +105,40 @@ async def async_get_device_ids(hass, call):
     return list(device_ids)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     hon = HonConnection(hass, entry)
     try:
         result = await hon.async_authorize()
-    except Exception as e:
-        raise ConfigEntryNotReady(f"hOn connection failed: {e}") from e
+    except HonConnectionError as err:
+        raise ConfigEntryNotReady(f"hOn connection failed: {err}") from err
+    except HonAuthenticationError as err:
+        raise ConfigEntryAuthFailed(
+            translation_domain=DOMAIN, translation_key="auth_failed"
+        ) from err
     if not result:
-        raise ConfigEntryNotReady("hOn authentication failed")
+        raise ConfigEntryAuthFailed(
+            translation_domain=DOMAIN, translation_key="auth_failed"
+        )
 
     # Log all appliances
-    _LOGGER.debug(f"Appliances: {hon.appliances}")
+    _LOGGER.debug("Appliances: %s", hon.appliances)
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.unique_id] = hon
-    hass.data[DOMAIN].setdefault(SERVICE_REGISTRY, set())
+    entry.runtime_data = hon
 
     for appliance in hon.appliances:
         coordinator = await hon.async_get_coordinator(appliance)
-        coordinator.device = HonDevice(hon, coordinator, appliance)
         await coordinator.async_config_entry_first_refresh()
 
         await coordinator.device.load_commands()
         await coordinator.device.load_statistics()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    async def _update_listener(hass: HomeAssistant, entry: HonConfigEntry) -> None:
+        """Handle options update."""
+        await hass.config_entries.async_reload(entry.entry_id)
+
+    entry.async_on_unload(entry.add_update_listener(_update_listener))
 
     async def handle_oven_start(call):
 
@@ -467,7 +483,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         "get_setting": async_get_setting,
     }
 
-    registered_services = hass.data[DOMAIN][SERVICE_REGISTRY]
+    registered_services = hass.data.setdefault(DOMAIN, {}).setdefault(
+        SERVICE_REGISTRY, set()
+    )
     for service_name, handler in services.items():
         if service_name in registered_services:
             continue
@@ -482,22 +500,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if not unload_ok:
         return False
 
-    hon = hass.data[DOMAIN].pop(entry.unique_id, None)
-    if hon is not None:
-        await hon.async_close()
-
-    remaining_entries = [
-        key for key in hass.data.get(DOMAIN, {}) if key != SERVICE_REGISTRY
-    ]
-    if not remaining_entries:
-        for service_name in hass.data[DOMAIN].get(SERVICE_REGISTRY, set()):
-            hass.services.async_remove(DOMAIN, service_name)
-        hass.data.pop(DOMAIN, None)
+    hon = entry.runtime_data
+    await hon.async_close()
 
     return True

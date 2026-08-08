@@ -1,82 +1,16 @@
 import logging
 import re
-from datetime import timedelta
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import callback
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
-    DataUpdateCoordinator,
-)
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import APPLIANCE_DEFAULT_NAME, DOMAIN
+from .coordinator import HonBaseCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class HonBaseCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass, hon, appliance):
-        """Initialize my coordinator."""
-        super().__init__(
-            hass,
-            _LOGGER,
-            name="hOn Device",
-            update_interval=timedelta(seconds=60),
-        )
-        self._hon = hon
-        self._device = None
-        self._appliance = appliance
-
-        try:
-            self._mac = appliance["macAddress"]
-            self._type_name = appliance["applianceTypeName"]
-            self._type_id = appliance["applianceTypeId"]
-            self._name = appliance.get(
-                "nickName",
-                APPLIANCE_DEFAULT_NAME.get(
-                    str(self._type_id), "Device ID: " + str(self._type_id)
-                ),
-            )
-            self._brand = appliance["brand"]
-            self._model = appliance["modelName"]
-            self._fw_version = appliance["fwVersion"]
-        except:
-            _LOGGER.warning(f"Invalid appliance data in {appliance}")
-
-    async def _async_update_data(self):
-        # data = await self._hon.async_get_context(self._device)
-        await self._device.load_context()
-
-        # data = await self._hon.async_get_state(self._mac, self._type_name)
-        # if( self._device != None ):
-        #    self._device.load_context(data)
-        # return data
-
-    @property
-    def device(self):
-        return self._device
-
-    @device.setter
-    def device(self, value):
-        self._device = value
-
-    async def async_set(self, parameters):
-        await self._hon.async_set(self._mac, self._type_name, parameters)
-
-    def get(self, key):
-        return self.data.get(key, "")
-
-    @property
-    def device_info(self):
-        return {
-            "identifiers": {(DOMAIN, self._mac, self._type_name)},
-            "name": self._name,
-            "manufacturer": self._brand,
-            "model": self._model,
-            "sw_version": self._fw_version,
-        }
 
 
 class HonBaseBinarySensorEntity(CoordinatorEntity, BinarySensorEntity):
@@ -119,7 +53,7 @@ class HonBaseBinarySensorEntity(CoordinatorEntity, BinarySensorEntity):
 
     @callback
     def _handle_coordinator_update(self):
-        if self._coordinator.data is False:
+        if not self.available:
             return
         self.coordinator_update()
         self.async_write_ha_state()
@@ -168,7 +102,7 @@ class HonBaseSensorEntity(CoordinatorEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self):
-        if self._coordinator.data is False:
+        if not self.available:
             return
         self.coordinator_update()
         self.async_write_ha_state()
@@ -223,11 +157,7 @@ class HonBaseSwitchEntity(CoordinatorEntity, SwitchEntity):
 
     @callback
     def _handle_coordinator_update(self):
-        if self._key == "screenDisplayStatus":
-            _LOGGER.warning(f"screenDisplayStatus value {self._device.get(self._key)}")
-        if self._key == "echoStatus":
-            _LOGGER.warning(f"echoStatus value {self._device.get(self._key)}")
-        if self._coordinator.data is False:
+        if not self.available:
             return
         self.coordinator_update()
         self.async_write_ha_state()

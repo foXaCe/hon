@@ -45,7 +45,7 @@ default_values = {
 
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
-    hon = hass.data[DOMAIN][entry.unique_id]
+    hon = entry.runtime_data
     translations = await translation.async_get_translations(
         hass, hass.config.language, "entity"
     )
