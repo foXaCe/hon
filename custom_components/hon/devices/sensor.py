@@ -31,7 +31,10 @@ divider = 1.0
 
 
 class HonBaseMode(HonBaseSensorEntity):
+    """Sensor showing the operation mode."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "machMode", "Mode")
 
         if self._type_id == APPLIANCE_TYPE.CLIMATE:
@@ -64,7 +67,10 @@ class HonBaseMode(HonBaseSensorEntity):
 
 
 class HonBaseProgramName(HonBaseSensorEntity):
+    """Sensor showing the current program name."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "program_name", "Program name")
 
         self.translation_key = "programs_" + self._type_name.lower()
@@ -84,7 +90,10 @@ class HonBaseProgramName(HonBaseSensorEntity):
 
 
 class HonBaseTemperature(HonBaseSensorEntity):
+    """Sensor showing a temperature value."""
+
     def __init__(self, hass, coordinator, entry, appliance, key, name) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, key, name)
 
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -93,9 +102,12 @@ class HonBaseTemperature(HonBaseSensorEntity):
 
 
 class HonBaseHumidity(HonBaseSensorEntity):
+    """Sensor showing the humidity."""
+
     def __init__(
         self, hass, coordinator, entry, appliance, zone="Z1", zone_name="Zone 1"
     ) -> None:
+        """Initialize the sensor."""
         super().__init__(
             coordinator, appliance, "humidity" + zone, f"Humidity {zone_name}"
         )
@@ -107,12 +119,18 @@ class HonBaseHumidity(HonBaseSensorEntity):
 
 
 class HonBaseInt(HonBaseSensorEntity):
+    """Sensor showing an integer value."""
+
     def __init__(self, hass, coordinator, entry, appliance, key, name) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, key, name)
 
 
 class HonBaseRemainingTime(HonBaseSensorEntity):
+    """Sensor showing the remaining time."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "remainingTimeMM", "Remaining time")
 
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -149,7 +167,10 @@ class HonBaseRemainingTime(HonBaseSensorEntity):
 
 
 class HonBaseIndoorPM2p5(HonBaseSensorEntity):
+    """Sensor showing the indoor PM2.5 level."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "pm2p5ValueIndoor", "Indoor PM 2.5")
 
         self._attr_device_class = SensorDeviceClass.PM25
@@ -159,7 +180,10 @@ class HonBaseIndoorPM2p5(HonBaseSensorEntity):
 
 
 class HonBaseIndoorPM10(HonBaseSensorEntity):
+    """Sensor showing the indoor PM10 level."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "pm10ValueIndoor", "Indoor PM 10")
 
         self._attr_device_class = SensorDeviceClass.PM10
@@ -169,7 +193,10 @@ class HonBaseIndoorPM10(HonBaseSensorEntity):
 
 
 class HonBaseIndoorVOC(HonBaseSensorEntity):
+    """Sensor showing the indoor VOC level."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "vocValueIndoor", "Indoor VOC")
 
         self._attr_icon = "mdi:chemical-weapon"
@@ -181,7 +208,10 @@ class HonBaseIndoorVOC(HonBaseSensorEntity):
 
 
 class HonBaseCOlevel(HonBaseSensorEntity):
+    """Sensor showing the CO level."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "coLevel", "CO level")
 
         self._attr_device_class = SensorDeviceClass.CO2
@@ -191,7 +221,10 @@ class HonBaseCOlevel(HonBaseSensorEntity):
 
 
 class HonBaseAIRquality(HonBaseSensorEntity):
+    """Sensor showing the air quality index."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "airQuality", "Air quality")
 
         self._attr_device_class = SensorDeviceClass.AQI
@@ -200,7 +233,10 @@ class HonBaseAIRquality(HonBaseSensorEntity):
 
 
 class HonBasePreFilter(HonBaseSensorEntity):
+    """Sensor showing the pre-filter lifetime."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "preFilterStatus", "Pre filter")
 
         self._attr_native_unit_of_measurement = PERCENTAGE
@@ -215,7 +251,10 @@ class HonBasePreFilter(HonBaseSensorEntity):
 
 
 class HonBaseMainFilter(HonBaseSensorEntity):
+    """Sensor showing the main filter lifetime."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "mainFilterStatus", "Main filter")
 
         self._attr_native_unit_of_measurement = PERCENTAGE
@@ -230,7 +269,10 @@ class HonBaseMainFilter(HonBaseSensorEntity):
 
 
 class HonBaseProgram(HonBaseSensorEntity):
+    """Sensor showing the program code."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "prCode", "Program code")
 
     def coordinator_update(self):
@@ -239,7 +281,10 @@ class HonBaseProgram(HonBaseSensorEntity):
 
 
 class HonBaseProgramPhase(HonBaseSensorEntity):
+    """Sensor showing the program phase."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "prPhase", "Program phase")
 
         if self._type_id == APPLIANCE_TYPE.TUMBLE_DRYER:
@@ -256,7 +301,10 @@ class HonBaseProgramPhase(HonBaseSensorEntity):
 
 
 class HonBaseProgramDuration(HonBaseSensorEntity):
+    """Sensor showing the program duration."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "prTime", "Program duration")
 
         self._attr_native_unit_of_measurement = UnitOfTime.MINUTES
@@ -265,7 +313,10 @@ class HonBaseProgramDuration(HonBaseSensorEntity):
 
 
 class HonBaseDryLevel(HonBaseSensorEntity):
+    """Sensor showing the dry level."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "dryLevel", "Dry level")
 
         self._attr_icon = "mdi:hair-dryer"
@@ -277,7 +328,10 @@ class HonBaseDryLevel(HonBaseSensorEntity):
 
 
 class HonBaseStart(HonBaseSensorEntity):
+    """Sensor showing the planned start time."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "", "Start time")
 
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -313,7 +367,10 @@ class HonBaseStart(HonBaseSensorEntity):
 
 
 class HonBaseEnd(HonBaseSensorEntity):
+    """Sensor showing the planned end time."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "", "End time")
 
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -350,7 +407,10 @@ class HonBaseEnd(HonBaseSensorEntity):
 
 
 class HonBaseMeanWaterConsumption(HonBaseSensorEntity):
+    """Sensor showing the mean water consumption."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "", "Mean water consumption")
 
         self._attr_native_unit_of_measurement = UnitOfVolume.LITERS
@@ -371,7 +431,10 @@ class HonBaseMeanWaterConsumption(HonBaseSensorEntity):
 
 
 class HonBaseTotalElectricityUsed(HonBaseSensorEntity):
+    """Sensor showing the total electricity used."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(
             coordinator, appliance, "totalElectricityUsed", "Total electricity used"
         )
@@ -386,7 +449,10 @@ class HonBaseTotalElectricityUsed(HonBaseSensorEntity):
 
 
 class HonBaseTotalWashCycle(HonBaseSensorEntity):
+    """Sensor showing the total wash cycle count."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "totalWashCycle", "Total wash cycle")
 
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
@@ -397,7 +463,10 @@ class HonBaseTotalWashCycle(HonBaseSensorEntity):
 
 
 class HonBaseTotalWaterUsed(HonBaseSensorEntity):
+    """Sensor showing the total water used."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "totalWaterUsed", "Total water used")
 
         self._attr_native_unit_of_measurement = UnitOfVolume.LITERS
@@ -410,7 +479,10 @@ class HonBaseTotalWaterUsed(HonBaseSensorEntity):
 
 
 class HonBaseWeight(HonBaseSensorEntity):
+    """Sensor showing the estimated load weight."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "actualWeight", "Estimated weight")
 
         self._attr_native_unit_of_measurement = UnitOfMass.KILOGRAMS
@@ -422,7 +494,10 @@ class HonBaseWeight(HonBaseSensorEntity):
 
 
 class HonBaseCurrentWaterUsed(HonBaseSensorEntity):
+    """Sensor showing the current water used."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(
             coordinator, appliance, "currentWaterUsed", "Current water used"
         )
@@ -437,7 +512,10 @@ class HonBaseCurrentWaterUsed(HonBaseSensorEntity):
 
 
 class HonBaseError(HonBaseSensorEntity):
+    """Sensor showing the last error code."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "errors", "Error")
 
         self.translation_key = "error"
@@ -452,7 +530,10 @@ class HonBaseError(HonBaseSensorEntity):
 
 
 class HonBaseCurrentElectricityUsed(HonBaseSensorEntity):
+    """Sensor showing the current electricity used."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(
             coordinator, appliance, "currentElectricityUsed", "Current electricity used"
         )
@@ -469,7 +550,10 @@ class HonBaseCurrentElectricityUsed(HonBaseSensorEntity):
 
 
 class HonBaseSpinSpeed(HonBaseSensorEntity):
+    """Sensor showing the spin speed."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "spinSpeed", "Spin speed")
 
         self._attr_native_unit_of_measurement = REVOLUTIONS_PER_MINUTE
@@ -485,7 +569,10 @@ class HonBaseSpinSpeed(HonBaseSensorEntity):
 
 
 class HonBaseVolume(HonBaseSensorEntity):
+    """Sensor showing the volume."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "volume", "Volume")
 
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -497,7 +584,10 @@ class HonBaseVolume(HonBaseSensorEntity):
 
 
 class HonBaseDisplayedApp(HonBaseSensorEntity):
+    """Sensor showing the currently displayed app."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "displayedApp", "Displayed app")
 
         self._attr_icon = "mdi:application"
@@ -508,7 +598,10 @@ class HonBaseDisplayedApp(HonBaseSensorEntity):
 
 
 class HonBaseProgramsCounter(HonBaseSensorEntity):
+    """Sensor showing the total programs count."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(
             coordinator, appliance, "statistics.programsCounter", "Total programs"
         )
@@ -523,7 +616,10 @@ class HonBaseProgramsCounter(HonBaseSensorEntity):
 
 
 class HonBaseCurrentWashCycle(HonBaseSensorEntity):
+    """Sensor showing the current wash cycle count."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(
             coordinator, appliance, "currentWashCycle", "Current wash cycle"
         )
@@ -536,7 +632,10 @@ class HonBaseCurrentWashCycle(HonBaseSensorEntity):
 
 
 class HonBaseDetergentPercent(HonBaseSensorEntity):
+    """Sensor showing the detergent level."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "detergentPercent", "Detergent level")
 
         self._attr_native_unit_of_measurement = PERCENTAGE
@@ -548,7 +647,10 @@ class HonBaseDetergentPercent(HonBaseSensorEntity):
 
 
 class HonBaseDetergentWeight(HonBaseSensorEntity):
+    """Sensor showing the detergent weight."""
+
     def __init__(self, hass, coordinator, entry, appliance, key, name) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, key, name)
 
         self._attr_native_unit_of_measurement = UnitOfMass.GRAMS
@@ -560,7 +662,10 @@ class HonBaseDetergentWeight(HonBaseSensorEntity):
 
 
 class HonBaseWaterHardness(HonBaseSensorEntity):
+    """Sensor showing the water hardness."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "waterHard", "Water hardness")
 
         self._attr_icon = "mdi:water-opacity"
@@ -570,7 +675,10 @@ class HonBaseWaterHardness(HonBaseSensorEntity):
 
 
 class HonBaseDelayTime(HonBaseSensorEntity):
+    """Sensor showing the delay time."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "delayTime", "Delay time")
 
         self._attr_native_unit_of_measurement = UnitOfTime.MINUTES
@@ -582,7 +690,10 @@ class HonBaseDelayTime(HonBaseSensorEntity):
 
 
 class HonBasePower(HonBaseSensorEntity):
+    """Sensor showing the power consumption."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "power", "Power")
 
         self._attr_native_unit_of_measurement = UnitOfPower.WATT
@@ -595,7 +706,10 @@ class HonBasePower(HonBaseSensorEntity):
 
 
 class HonBaseWorkTime(HonBaseSensorEntity):
+    """Sensor showing the total work time."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator, appliance, "totalWorkTime", "Total work time")
 
         self._attr_native_unit_of_measurement = UnitOfTime.MINUTES

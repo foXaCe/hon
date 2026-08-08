@@ -9,7 +9,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 
 class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
+    """Button that dumps the start program parameters."""
+
     def __init__(self, coordinator, appliance) -> None:
+        """Initialize the button entity."""
         super().__init__(coordinator)
         self._coordinator = coordinator
         self._device = coordinator.device
@@ -19,6 +22,7 @@ class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
 
     @property
     def device_info(self):
+        """Return the device registry info."""
         return self._device.device_info
 
     async def async_press(self) -> None:
@@ -58,7 +62,10 @@ class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
 
 
 class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
+    """Button that dumps the settings parameters."""
+
     def __init__(self, coordinator, appliance) -> None:
+        """Initialize the button entity."""
         super().__init__(coordinator)
         self._coordinator = coordinator
         self._device = coordinator.device
@@ -68,6 +75,7 @@ class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
 
     @property
     def device_info(self):
+        """Return the device registry info."""
         return self._device.device_info
 
     async def async_press(self) -> None:

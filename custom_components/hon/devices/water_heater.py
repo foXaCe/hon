@@ -42,7 +42,10 @@ MACHMODE_TO_MODE = {machmode: name for name, (machmode, _prog) in WH_MODES.items
 
 
 class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
+    """Water heater entity for an hOn water heater."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the water heater entity."""
         super().__init__(coordinator)
         self._coordinator = coordinator
         self._hass = hass
@@ -128,6 +131,7 @@ class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
     # ----- commands ------------------------------------------------------
 
     async def async_set_temperature(self, **kwargs) -> None:
+        """Set the target temperature."""
         if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
             return
         await self._device.settings_command({"tempSel": int(temperature)}).send()
@@ -136,6 +140,7 @@ class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
         self.async_write_ha_state()
 
     async def async_set_operation_mode(self, operation_mode: str) -> None:
+        """Set the operation mode."""
         if operation_mode == STATE_OFF:
             await self._device.stop_command().send()
         else:
@@ -151,6 +156,7 @@ class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs) -> None:
+        """Turn the water heater on."""
         mode = MACHMODE_TO_MODE.get(str(self._device.get("machMode")), "Eco")
         await self._device.start_command(WH_MODES[mode][1]).send()
         self._attr_current_operation = mode
@@ -158,12 +164,14 @@ class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
+        """Turn the water heater off."""
         await self._device.stop_command().send()
         self._attr_current_operation = STATE_OFF
         self.start_watcher()
         self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self):
+        """Clean up the watcher when the entity is removed."""
         if self._watcher is not None:
             self._watcher()
             self._watcher = None
@@ -172,14 +180,17 @@ class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
 
     @property
     def unique_id(self) -> str:
+        """Return the unique id."""
         return self._unique_id
 
     @property
     def name(self) -> str:
+        """Return the entity name."""
         return self._name
 
     @property
     def device_info(self):
+        """Return the device registry info."""
         return {
             "identifiers": {(DOMAIN, self._mac, self._type_name)},
             "name": self._name,

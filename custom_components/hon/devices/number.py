@@ -90,10 +90,12 @@ class HonNumber(HonBaseNumberEntity):
 
     @property
     def native_value(self) -> float | None:
+        """Return the current setting value."""
         setting = self._get_setting()
         return None if setting is None else setting.value
 
     async def async_set_native_value(self, value: float) -> None:
+        """Set the native value."""
         command_name, parameter_name = self.entity_description.key.split(".", 1)
         command = self._device.start_command(parameters={parameter_name: value})
         await command.send()
@@ -108,6 +110,7 @@ class HonNumber(HonBaseNumberEntity):
 
     @property
     def available(self) -> bool:
+        """Return True if the entity is available."""
         return super().available and self._device.has_current_setting(
             self.entity_description.key
         )

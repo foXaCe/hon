@@ -15,6 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
+    """Set up the select platform."""
     hon = entry.runtime_data
     translations = await translation.async_get_translations(
         hass, hass.config.language, "entity"

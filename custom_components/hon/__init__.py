@@ -1,3 +1,7 @@
+"""hOn (Haier smart home) integration."""
+
+from __future__ import annotations
+
 import ast
 import logging
 from datetime import datetime
@@ -41,6 +45,7 @@ CONFIG_SCHEMA = vol.Schema(
 
 # This method will update a sensor value with the targetted one for a better user experience
 def update_sensor(hass, device_id, mac, sensor_name, state):
+    """Update the matching sensor with the given state."""
 
     entity_reg = er.async_get(hass)
     entries = er.async_entries_for_device(entity_reg, device_id)
@@ -53,6 +58,7 @@ def update_sensor(hass, device_id, mac, sensor_name, state):
 
 
 def get_parameters(call):
+    """Parse the parameters string from a service call."""
     parameters_str = call.data.get("parameters", "{}")
     if type(parameters_str) != str:
         parameters_str = str(parameters_str)
@@ -65,6 +71,7 @@ def _minutes_until(target: datetime, now: datetime) -> int:
 
 
 def get_device_ids(hass, call):
+    """Return the target device ids from a service call."""
     device_ids = set(call.data.get("device_id", []))
     entity_ids = call.data.get("entity_id", [])
 
@@ -107,6 +114,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: HonConfigEntry) -> boo
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
+    """Set up the hOn integration for a config entry."""
     hon = HonConnection(hass, entry)
     try:
         result = await hon.async_authorize()

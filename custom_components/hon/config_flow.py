@@ -1,3 +1,7 @@
+"""Config flow for the hOn integration."""
+
+from __future__ import annotations
+
 import logging
 from typing import Any
 
@@ -9,6 +13,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
 )
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .api.client import HonConnection
@@ -37,11 +42,13 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     CONNECTION_CLASS = CONN_CLASS_LOCAL_POLL
 
     def __init__(self):
+        """Initialize the flow handler."""
         self._email = None
         self._password = None
 
     @staticmethod
-    async def async_get_options_flow(
+    @callback
+    def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
@@ -257,6 +264,7 @@ class HonOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle hOn options."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize the options flow handler."""
         self.config_entry = config_entry
 
     async def async_step_init(

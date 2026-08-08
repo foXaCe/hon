@@ -54,6 +54,7 @@ class HonSelect(HonBaseEntity, SelectEntity):
 
     @property
     def current_option(self) -> str | None:
+        """Return the current option."""
         setting = self._get_setting()
         if setting is None:
             return None
@@ -63,6 +64,7 @@ class HonSelect(HonBaseEntity, SelectEntity):
         return value
 
     async def async_select_option(self, option: str) -> None:
+        """Select an option."""
         command_name, parameter_name = self.entity_description.key.split(".", 1)
         if command_name == "settings":
             command = self._device.settings_command({parameter_name: option})
@@ -88,6 +90,7 @@ class HonSelect(HonBaseEntity, SelectEntity):
 
     @property
     def available(self) -> bool:
+        """Return True if the entity is available."""
         return super().available and self._device.has_current_setting(
             self.entity_description.key
         )

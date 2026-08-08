@@ -40,7 +40,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HonClimateEntity(CoordinatorEntity, ClimateEntity):
+    """Climate entity for an hOn air conditioner."""
+
     def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the climate entity."""
         super().__init__(coordinator)
         self._coordinator = coordinator
         self._hon = entry.runtime_data
@@ -110,46 +113,55 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
         self._handle_coordinator_update(False)
 
     async def async_set_sleep_mode(self, sleep_mode=False):
+        """Set the sleep mode."""
         self._sleep_mode = sleep_mode
         parameters = {"silentSleepStatus": "1" if sleep_mode else "0"}
         await self._device.settings_command(parameters).send()
 
     async def async_set_rapid_mode(self, rapid_mode=False):
+        """Set the rapid mode."""
         self._rapid_mode = rapid_mode
         parameters = {"rapidMode": "1" if rapid_mode else "0"}
         await self._device.settings_command(parameters).send()
 
     async def async_set_silent_mode(self, silent_mode=False):
+        """Set the silent mode."""
         self._silent_mode = silent_mode
         parameters = {"muteStatus": "1" if silent_mode else "0"}
         await self._device.settings_command(parameters).send()
 
     async def async_set_screen_display(self, screen_display=True):
+        """Set whether the display stays on."""
         self._screen_display = screen_display
         parameters = {"screenDisplayStatus": "1" if screen_display else "0"}
         await self._device.settings_command(parameters).send()
 
     async def async_set_echo_mode(self, echo_mode=False):
+        """Set the echo mode."""
         self._echo_mode = echo_mode
         parameters = {"echoStatus": "0" if echo_mode else "1"}
         await self._device.settings_command(parameters).send()
 
     async def async_set_wind_direction_horizontal(self, value: int):
+        """Set the horizontal wind direction."""
         self._wind_direction_horizontal = value
         parameters = {"windDirectionHorizontal": str(value)}
         await self._device.settings_command(parameters).send()
 
     async def async_set_wind_direction_vertical(self, value: int):
+        """Set the vertical wind direction."""
         self._wind_direction_vertical = value
         parameters = {"windDirectionVertical": str(value)}
         await self._device.settings_command(parameters).send()
 
     async def async_set_eco_pilot_mode(self, value: int):
+        """Set the eco pilot mode."""
         self._eco_pilot_mode = value
         parameters = {"humanSensingStatus": value}
         await self._device.settings_command(parameters).send()
 
     def start_watcher(self, timedelta=timedelta(seconds=8)):
+        """Start a short watcher that suppresses coordinator overwrites."""
         if self._watcher is not None:
             self._watcher()
         self._watcher = async_call_later(
@@ -160,6 +172,7 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
     async def async_update_after_state_change(
         self, now: datetime | None = None
     ) -> None:
+        """Clear the state-change watcher."""
         self._watcher = None
 
     @callback
@@ -201,6 +214,7 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
             self.async_write_ha_state()
 
     def update_swing_mode(self, swing_horizontal, swing_vertical):
+        """Update the swing mode from the wind direction values."""
         self._attr_swing_mode = SWING_OFF
         if (
             swing_horizontal == ClimateSwingHorizontal.AUTO
@@ -214,10 +228,12 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
 
     @property
     def unique_id(self) -> str:
+        """Return the unique id."""
         return self._unique_id
 
     @property
     def name(self) -> str:
+        """Return the entity name."""
         return self._name
 
     @property
@@ -227,6 +243,7 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
 
     @property
     def device_info(self):
+        """Return the device registry info."""
         return {
             "identifiers": {
                 # Serial numbers are unique identifiers within a specific domain
@@ -280,11 +297,13 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
         self.start_watcher()
 
     async def async_turn_off(self) -> None:
+        """Turn the device off."""
         await self._device.stop_command().send()
         self._attr_hvac_mode = HVACMode.OFF
         self.start_watcher()
 
     async def async_turn_on(self) -> None:
+        """Turn the device on."""
         await self._device.start_command("iot_simple_start").send()
         self._attr_hvac_mode = get_key(
             CLIMATE_HVAC_MODE, self._device.get("machMode"), HVACMode.OFF
@@ -292,6 +311,7 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
         self.start_watcher()
 
     async def async_set_fan_mode(self, fan_mode: str):
+        """Set the fan mode."""
         self._attr_fan_mode = fan_mode
         await self._device.settings_command(
             {
@@ -303,7 +323,7 @@ class HonClimateEntity(CoordinatorEntity, ClimateEntity):
         self.start_watcher()
 
     async def async_set_swing_mode(self, swing_mode: str):
-
+        """Set the swing mode."""
         if swing_mode == SWING_BOTH:
             parameters = {
                 "windDirectionHorizontal": ClimateSwingHorizontal.AUTO,

@@ -29,11 +29,14 @@ class HonSwitchEntityDescription(SwitchEntityDescription):
 
 
 class HonSwitchEntity(HonBaseSwitchEntity):
+    """Switch entity controlling a settings parameter."""
+
     entity_description: HonSwitchEntityDescription
 
     def __init__(
         self, hass, coordinator, entry, appliance, entity_description, invert=False
     ) -> None:
+        """Initialize the switch entity."""
         super().__init__(coordinator, appliance, entity_description)
         self.invert = invert
 
@@ -57,6 +60,7 @@ class HonSwitchEntity(HonBaseSwitchEntity):
         return self._device.get(self.entity_description.key, "0") == "1"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the switch on."""
         setting = self._setting()
         if setting is not None:
             if type(setting) == HonParameter:
@@ -80,6 +84,7 @@ class HonSwitchEntity(HonBaseSwitchEntity):
         self.coordinator.async_set_updated_data({})
 
     async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the switch off."""
         setting = self._setting()
         if setting is not None:
             if type(setting) == HonParameter:
@@ -106,13 +111,13 @@ class HonSwitchEntity(HonBaseSwitchEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         if not super().available:
-            _LOGGER.warning("HonSwitchEntity not available: super() is not")
+            _LOGGER.debug("HonSwitchEntity not available: coordinator update failed")
             return False
         if not self._device.get("remoteCtrValid", "1") == "1":
-            _LOGGER.warning("HonSwitchEntity not available: remoteCtrValid==1")
+            _LOGGER.debug("HonSwitchEntity not available: remoteCtrValid")
             return False
         if self._device.get("attributes.lastConnEvent.category") == "DISCONNECTED":
-            _LOGGER.warning("HonSwitchEntity not available: DISCONNECTED")
+            _LOGGER.debug("HonSwitchEntity not available: device DISCONNECTED")
             return False
 
         setting = self._setting()

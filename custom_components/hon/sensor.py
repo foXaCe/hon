@@ -56,6 +56,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ) -> None:
+    """Set up the sensor platform."""
 
     hon = entry.runtime_data
 

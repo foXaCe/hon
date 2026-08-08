@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ) -> None:
+    """Set up the button platform."""
 
     hon = entry.runtime_data
 

@@ -1,5 +1,7 @@
 """hOn component constants."""
 
+from __future__ import annotations
+
 from enum import IntEnum
 
 from homeassistant.components.climate.const import (
@@ -43,6 +45,8 @@ DEVICE_MODEL = "exynos9820"
 
 
 class APPLIANCE_TYPE(IntEnum):
+    """Appliance type identifiers used by the hOn API."""
+
     WASHING_MACHINE = (1,)
     WASH_DRYER = (2,)
     OVEN = (4,)
@@ -90,6 +94,8 @@ CLIMATE_HVAC_MODE = {
 
 
 class ClimateSwingVertical:
+    """Vertical swing positions for climate devices."""
+
     AUTO = "8"
     VERY_LOW = "7"
     LOW = "6"
@@ -101,6 +107,8 @@ class ClimateSwingVertical:
 
 
 class ClimateSwingHorizontal:
+    """Horizontal swing positions for climate devices."""
+
     AUTO = "7"
     MIDDLE = "0"
     FAR_LEFT = "3"
@@ -110,6 +118,8 @@ class ClimateSwingHorizontal:
 
 
 class ClimateEcoPilotMode:
+    """Eco pilot modes for climate devices."""
+
     OFF = "0"
     AVOID = "1"
     FOLLOW = "2"

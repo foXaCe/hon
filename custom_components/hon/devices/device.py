@@ -1,3 +1,7 @@
+"""Device model wrapping appliance data and commands."""
+
+from __future__ import annotations
+
 import logging
 
 from homeassistant.helpers.update_coordinator import (
@@ -12,7 +16,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HonDevice(CoordinatorEntity):
+    """Model of a connected appliance: data, attributes, statistics and commands."""
+
     def __init__(self, hon, coordinator, appliance) -> None:
+        """Initialize the device from the appliance payload."""
         super().__init__(coordinator)
 
         self._hon = hon
@@ -56,6 +63,7 @@ class HonDevice(CoordinatorEntity):
             return self.appliance[item]
 
     def set(self, item, value):
+        """Store a value in the device data."""
         if item in self.data:
             self.data[item] = value
         elif item in self.attributes["parameters"]:
@@ -64,21 +72,26 @@ class HonDevice(CoordinatorEntity):
             self.appliance[item] = value
 
     def get(self, item, default=None):
+        """Return a device value, or the default when missing."""
         try:
             return self[item]
         except (KeyError, IndexError):
             return default
 
     def getInt(self, item):
+        """Return a device value as an int."""
         return int(self.get(item, 0))
 
     def getFloat(self, item):
+        """Return a device value as a float."""
         return float(self.get(item, 0))
 
     def has(self, item, default=None):
+        """Return whether a device value is present."""
         return self.get(item) != None
 
     def getProgramName(self):
+        """Return the current program name, if any."""
         try:
             # Önce activity.attributes içinde ara
             activity = self._attributes.get("activity", {})
@@ -135,6 +148,7 @@ class HonDevice(CoordinatorEntity):
         return None
 
     async def load_context(self):
+        """Fetch the latest device context from the cloud."""
         data = await self._hon.async_get_context(self)
         self._attributes = data or {}
 
@@ -160,6 +174,7 @@ class HonDevice(CoordinatorEntity):
 
     @property
     def data(self):
+        """Return the combined device data."""
         return {
             "attributes": self.attributes,
             "appliance": self.appliance,
@@ -169,42 +184,52 @@ class HonDevice(CoordinatorEntity):
 
     @property
     def appliance_type(self):
+        """Return the appliance type name."""
         return self._appliance.get("applianceTypeName")
 
     @property
     def mac_address(self):
+        """Return the device MAC address."""
         return self._appliance.get("macAddress")
 
     @property
     def model_name(self):
+        """Return the device model name."""
         return self._appliance.get("modelName")
 
     @property
     def name(self):
+        """Return the device display name."""
         return self._name
 
     @property
     def commands_options(self):
+        """Return the command options from the appliance model."""
         return self._appliance_model.get("options")
 
     @property
     def commands(self):
+        """Return the loaded commands."""
         return self._commands
 
     @property
     def attributes(self):
+        """Return the device attributes."""
         return self._attributes
 
     @property
     def statistics(self):
+        """Return the device statistics."""
         return self._statistics
 
     @property
     def appliance(self):
+        """Return the raw appliance payload."""
         return self._appliance
 
     @property
     def settings(self):
+        """Return all command settings."""
         result = {}
         for name, command in self._commands.items():
             for key, setting in command.settings.items():
@@ -213,6 +238,7 @@ class HonDevice(CoordinatorEntity):
 
     @property
     def parameters(self):
+        """Return the current parameter values per command."""
         result = {}
         for name, command in self._commands.items():
             for key, parameter in command.parameters.items():
@@ -220,6 +246,7 @@ class HonDevice(CoordinatorEntity):
         return result
 
     def update_command(self, command, parameters):
+        """Apply new values to a command's parameters."""
         for key in command.parameters.keys():
             param = command.parameters.get(key)
 
@@ -249,6 +276,7 @@ class HonDevice(CoordinatorEntity):
                         pass
 
     def settings_command(self, parameters={}):
+        """Prepare the settings command with the given parameters."""
         if "settings" not in self._commands:
             raise ValueError("No command to update settings of the device")
         command = self._commands.get("settings")
@@ -264,6 +292,7 @@ class HonDevice(CoordinatorEntity):
         return command
 
     def start_command(self, program=None, parameters={}):
+        """Prepare the start program command with the given parameters."""
         if "startProgram" not in self._commands:
             raise ValueError("No command to start the device")
         command = self._commands.get("startProgram")
@@ -283,6 +312,7 @@ class HonDevice(CoordinatorEntity):
         return command
 
     def get_setting(self, setting_key):
+        """Return a setting parameter for a dotted key."""
         command_name, parameter_key = setting_key.split(".", 1)
         command = self._commands.get(command_name)
         if command is None:
@@ -290,6 +320,7 @@ class HonDevice(CoordinatorEntity):
         return command.settings.get(parameter_key)
 
     def has_current_setting(self, setting_key):
+        """Return whether a dotted key maps to a parameter."""
         command_name, parameter_key = setting_key.split(".", 1)
         command = self._commands.get(command_name)
         if command is None:
@@ -297,6 +328,7 @@ class HonDevice(CoordinatorEntity):
         return parameter_key in command.parameters
 
     def stop_command(self, parameters={}):
+        """Prepare the stop program command with the given parameters."""
         if "stopProgram" in self._commands:
             command = self._commands.get("stopProgram")
             self.update_command(command, self.attributes["parameters"])
@@ -305,6 +337,7 @@ class HonDevice(CoordinatorEntity):
         raise ValueError("No command to stop the device")
 
     async def load_commands(self):
+        """Load the command catalogue from the cloud."""
         commands = await self._hon.load_commands(self._appliance)
 
         try:
@@ -336,10 +369,12 @@ class HonDevice(CoordinatorEntity):
                     self._commands[command] = cmd
 
     async def load_statistics(self):
+        """Load the lifetime statistics from the cloud."""
         self._statistics = await self._hon.load_statistics(self)
 
     @property
     def device_info(self):
+        """Return the device registry info."""
         return {
             "identifiers": {(DOMAIN, self._mac, self._type_name)},
             "name": self._name,
