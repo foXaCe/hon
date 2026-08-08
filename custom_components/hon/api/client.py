@@ -262,7 +262,9 @@ class HonConnection:
             _LOGGER.error("hOn Invalid Data after POST [%s]", url)
             return False
 
-        _LOGGER.debug("All appliances: %s", self._appliances)
+        _LOGGER.debug(
+            "All appliances: %s", [a.get("macAddress") for a in self._appliances]
+        )
 
         # Keep only appliances that expose a MAC address and a type id
         self._appliances = [
@@ -294,7 +296,7 @@ class HonConnection:
         result = json_data.get("payload", {})
         if not result or result.pop("resultCode") != "0":
             return {}
-        _LOGGER.debug("Commands: %s", result)
+        _LOGGER.debug("Commands loaded: %d entries", len(result))
         return result
 
     async def async_get_context(self, device) -> dict[str, Any]:
@@ -364,7 +366,7 @@ class HonConnection:
             "timestamp": timestamp,
             "transactionId": f"{mac}_{timestamp}",
         }
-        _LOGGER.debug("Command sent (async_set): %s", command)
+        _LOGGER.debug("Command sent (async_set): mac=%s type=%s", mac, type_name)
 
         try:
             data = await self._async_request(
@@ -376,7 +378,9 @@ class HonConnection:
         except (json.JSONDecodeError, HonConnectionError):
             _LOGGER.error("hOn Invalid Data after sending command")
             return False
-        _LOGGER.debug("Command result (async_set): %s", data)
+        _LOGGER.debug(
+            "Command result (async_set): %s", data.get("payload", {}).get("resultCode")
+        )
         if data["payload"]["resultCode"] == "0":
             return True
         _LOGGER.error("hOn command has been rejected. Error message [%s]", data)
@@ -415,7 +419,12 @@ class HonConnection:
             "parameters": parameters,
             "applianceType": device.appliance_type,
         }
-        _LOGGER.debug("Command sent (send_command): %s", payload)
+        _LOGGER.debug(
+            "Command sent (send_command): mac=%s type=%s cmd=%s",
+            device.mac_address,
+            device.appliance_type,
+            command,
+        )
 
         try:
             data = await self._async_request(
@@ -427,7 +436,10 @@ class HonConnection:
         except (json.JSONDecodeError, HonConnectionError):
             _LOGGER.error("hOn Invalid Data after sending command")
             return False
-        _LOGGER.debug("Command result (send_command): %s", data)
+        _LOGGER.debug(
+            "Command result (send_command): %s",
+            data.get("payload", {}).get("resultCode"),
+        )
         if data["payload"]["resultCode"] == "0":
             return True
         _LOGGER.error("hOn command has been rejected. Error message [%s]", data)

@@ -130,8 +130,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
             translation_domain=DOMAIN, translation_key="auth_failed"
         )
 
-    # Log all appliances
-    _LOGGER.debug("Appliances: %s", hon.appliances)
+    # Log the appliance MAC addresses only (not the full payload)
+    _LOGGER.debug("Appliances: %s", [a.get("macAddress") for a in hon.appliances])
 
     entry.runtime_data = hon
 
