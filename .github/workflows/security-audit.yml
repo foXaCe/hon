@@ -43,10 +43,12 @@ jobs:
       - name: Audit requirements_dev / test
         run: |
           for r in requirements_dev.txt requirements_test.txt requirements.txt; do
-            [ -f "$r" ] && pip-audit --requirement "$r" --strict \
-              --ignore-vuln PYSEC-2026-3552 \
-              --ignore-vuln PYSEC-2026-3553 \
-              --ignore-vuln PYSEC-2026-3554
+            if [ -f "$r" ]; then
+              pip-audit --requirement "$r" --strict \
+                --ignore-vuln PYSEC-2026-3552 \
+                --ignore-vuln PYSEC-2026-3553 \
+                --ignore-vuln PYSEC-2026-3554
+            fi
           done
 
   osv-scanner:
