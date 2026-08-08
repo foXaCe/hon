@@ -63,13 +63,12 @@ class HonDevice(CoordinatorEntity):
             return self.appliance[item]
 
     def set(self, item, value):
-        """Store a value in the device data."""
-        if item in self.data:
-            self.data[item] = value
-        elif item in self.attributes["parameters"]:
-            self.attributes["parameters"][item] = value
-        else:
-            self.appliance[item] = value
+        """Store a value in the device data.
+
+        The value is persisted in the mutable parameters store (``data``
+        rebuilds a fresh dict on every access and must not be written to).
+        """
+        self.attributes.setdefault("parameters", {})[item] = value
 
     def get(self, item, default=None):
         """Return a device value, or the default when missing."""

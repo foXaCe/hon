@@ -263,10 +263,6 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 class HonOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle hOn options."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize the options flow handler."""
-        self.config_entry = config_entry
-
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:

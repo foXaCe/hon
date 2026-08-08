@@ -36,7 +36,12 @@ select = [
     "SIM102", "SIM118", "SIM201",    # simplification patterns
     "F401", "F841",                  # imports/vars used in commented code
 ]
-"tests/*" = ["D"]
+"tests/*" = [
+    "D",
+    "E501",   # long fixture lines
+    "N802",   # camelCase mock methods mirroring hOn API (getInt, getFloat, getProgramName)
+    "TC002",  # type-only imports in fixtures
+]
 
 [tool.mypy]
 python_version = "3.14"
