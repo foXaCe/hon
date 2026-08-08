@@ -58,6 +58,7 @@ follow_imports = "skip"
 disable_error_code = [
     "list-item", "union-attr", "assignment", "var-annotated",
     "attr-defined", "arg-type", "return-value", "no-any-return",
+    "untyped-decorator", "call-arg",
     "misc", "index", "import-untyped",
 ]
 

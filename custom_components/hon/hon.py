@@ -206,7 +206,9 @@ class HonConnection:
         ) as response:
             data = await response.json()
             _LOGGER.debug(
-                f"Context for mac[{device.mac_address}] type [{device.appliance_type}] {data}"
+                "Context fetched for mac[%s] type [%s]",
+                device.mac_address,
+                device.appliance_type,
             )
             return data.get("payload", {})
 
@@ -221,7 +223,9 @@ class HonConnection:
         ) as response:
             data = await response.json()
             _LOGGER.debug(
-                f"Statistic for mac[{device.mac_address}] type [{device.appliance_type}] {data}"
+                "Statistics fetched for mac[%s] type [%s]",
+                device.mac_address,
+                device.appliance_type,
             )
             return data.get("payload", {})
 
