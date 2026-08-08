@@ -130,8 +130,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
             translation_domain=DOMAIN, translation_key="auth_failed"
         )
 
-    # Log the appliance MAC addresses only (not the full payload)
-    _LOGGER.debug("Appliances: %s", [a.get("macAddress") for a in hon.appliances])
+    # Log the appliance count only (MAC addresses are identifiers)
+    _LOGGER.debug("Appliances loaded: %d", len(hon.appliances))
 
     entry.runtime_data = hon
 
@@ -292,7 +292,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
             or coordinator.device.get("attributes.lastConnEvent.category")
             == "DISCONNECTED"
         ):
-            _LOGGER.error("This hOn device is disconnected - Mac address [%s]", mac)
+            _LOGGER.error("This hOn device is disconnected")
             return
 
         return await hon.async_set(mac, "WM", parameters)

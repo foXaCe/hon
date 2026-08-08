@@ -288,9 +288,7 @@ class HonConnection:
             _LOGGER.error("hOn Invalid Data after POST [%s]", url)
             return False
 
-        _LOGGER.debug(
-            "All appliances: %s", [a.get("macAddress") for a in self._appliances]
-        )
+        _LOGGER.debug("Appliances loaded: %d", len(self._appliances))
 
         # Keep only appliances that expose a MAC address and a type id
         self._appliances = [
@@ -326,11 +324,7 @@ class HonConnection:
             return {}
         result_code = result.pop("resultCode", None)
         if result_code != "0":
-            _LOGGER.warning(
-                "Command retrieve returned resultCode %s for %s",
-                result_code,
-                appliance.get("macAddress"),
-            )
+            _LOGGER.warning("Command retrieve returned resultCode %s", result_code)
             return {}
         _LOGGER.debug("Commands loaded: %d entries", len(result))
         return result
@@ -402,7 +396,7 @@ class HonConnection:
             "timestamp": timestamp,
             "transactionId": f"{mac}_{timestamp}",
         }
-        _LOGGER.debug("Command sent (async_set): mac=%s type=%s", mac, type_name)
+        _LOGGER.debug("Command sent (async_set): type=%s", type_name)
 
         try:
             data = await self._async_request(
@@ -464,8 +458,7 @@ class HonConnection:
         ):
             payload["programName"] = f"PROGRAMS.WM_WD.{program.upper()}"
         _LOGGER.debug(
-            "Command sent (send_command): mac=%s type=%s cmd=%s",
-            device.mac_address,
+            "Command sent (send_command): type=%s cmd=%s",
             device.appliance_type,
             command,
         )
