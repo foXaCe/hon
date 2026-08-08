@@ -1,24 +1,15 @@
 import logging
-import asyncio
-import json
-from datetime import datetime, timedelta, timezone
-from dateutil.tz import gettz
-from typing import Optional
-from enum import IntEnum
-
-from .const import DOMAIN, APPLIANCE_TYPE
-from .base import HonBaseCoordinator, HonBaseBinarySensorEntity
-
-from homeassistant.core import callback
-from homeassistant.helpers import entity_platform
-from homeassistant.config_entries import ConfigEntry
 
 from homeassistant.components.binary_sensor import (
-    BinarySensorEntity,
     BinarySensorDeviceClass,
 )
+from homeassistant.config_entries import ConfigEntry
+
+from .base import HonBaseBinarySensorEntity
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> None:
 
@@ -26,7 +17,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
 
     appliances = []
     for appliance in hon.appliances:
-
         coordinator = await hon.async_get_coordinator(appliance)
         device = coordinator.device
 
@@ -34,34 +24,103 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
         appliances.extend([HonBaseOnOff(hass, coordinator, entry, appliance)])
 
         if device.has("doorStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "doorStatus", "Door status", BinarySensorDeviceClass.DOOR)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "doorStatus",
+                        "Door status",
+                        BinarySensorDeviceClass.DOOR,
+                    )
+                ]
+            )
         if device.has("defrostStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "defrostStatus", "Defrost status", BinarySensorDeviceClass.RUNNING)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "defrostStatus",
+                        "Defrost status",
+                        BinarySensorDeviceClass.RUNNING,
+                    )
+                ]
+            )
 
         if device.has("saltStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "saltStatus", "Salt", BinarySensorDeviceClass.PRESENCE)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "saltStatus",
+                        "Salt",
+                        BinarySensorDeviceClass.PRESENCE,
+                    )
+                ]
+            )
         if device.has("rinseAidStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "rinseAidStatus", "Rinse aid", BinarySensorDeviceClass.PRESENCE)])
-        
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "rinseAidStatus",
+                        "Rinse aid",
+                        BinarySensorDeviceClass.PRESENCE,
+                    )
+                ]
+            )
 
         if device.has("doorStatusZ1"):
-            appliances.extend([HonBaseDoorStatus(hass, coordinator, entry, appliance, "Z1", "zone 1")])
+            appliances.extend(
+                [HonBaseDoorStatus(hass, coordinator, entry, appliance, "Z1", "zone 1")]
+            )
         if device.has("doorStatusZ2"):
-            appliances.extend([HonBaseDoorStatus(hass, coordinator, entry, appliance, "Z2", "zone 2")])
+            appliances.extend(
+                [HonBaseDoorStatus(hass, coordinator, entry, appliance, "Z2", "zone 2")]
+            )
         if device.has("doorLockStatus"):
-            appliances.extend([HonBaseDoorLockStatus(hass, coordinator, entry, appliance)])
+            appliances.extend(
+                [HonBaseDoorLockStatus(hass, coordinator, entry, appliance)]
+            )
 
         if device.has("door2StatusZ1"):
-            appliances.extend([HonBaseDoor2Status(hass, coordinator, entry, appliance, "Z1", "zone 1")])
+            appliances.extend(
+                [
+                    HonBaseDoor2Status(
+                        hass, coordinator, entry, appliance, "Z1", "zone 1"
+                    )
+                ]
+            )
         if device.has("door2StatusZ2"):
-            appliances.extend([HonBaseDoor2Status(hass, coordinator, entry, appliance, "Z2", "zone 2")])
+            appliances.extend(
+                [
+                    HonBaseDoor2Status(
+                        hass, coordinator, entry, appliance, "Z2", "zone 2"
+                    )
+                ]
+            )
 
         if device.has("lockStatus"):
-            appliances.extend([HonBaseChildLockStatus(hass, coordinator, entry, appliance)])
+            appliances.extend(
+                [HonBaseChildLockStatus(hass, coordinator, entry, appliance)]
+            )
         if device.has("lightStatus"):
             appliances.extend([HonBaseLightStatus(hass, coordinator, entry, appliance)])
         if device.has("remoteCtrValid"):
-            appliances.extend([HonBaseRemoteControl(hass, coordinator, entry, appliance)])
+            appliances.extend(
+                [HonBaseRemoteControl(hass, coordinator, entry, appliance)]
+            )
         if device.has("preheatStatus"):
             appliances.extend([HonBasePreheating(hass, coordinator, entry, appliance)])
         if device.has("healthMode"):
@@ -71,41 +130,161 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
 
         # WH (Water Heater) additional binary sensors
         if device.has("heatingStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "heatingStatus", "Heating", BinarySensorDeviceClass.HEAT)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "heatingStatus",
+                        "Heating",
+                        BinarySensorDeviceClass.HEAT,
+                    )
+                ]
+            )
         if device.has("anodeMaintenanceStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "anodeMaintenanceStatus", "Anode maintenance", BinarySensorDeviceClass.PROBLEM)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "anodeMaintenanceStatus",
+                        "Anode maintenance",
+                        BinarySensorDeviceClass.PROBLEM,
+                    )
+                ]
+            )
         if device.has("tankMaintenanceStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "tankMaintenanceStatus", "Tank maintenance", BinarySensorDeviceClass.PROBLEM)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "tankMaintenanceStatus",
+                        "Tank maintenance",
+                        BinarySensorDeviceClass.PROBLEM,
+                    )
+                ]
+            )
 
         # WM additional binary sensors
         if device.has("pause"):
             appliances.extend([HonBasePauseStatus(hass, coordinator, entry, appliance)])
         if device.has("nightWashStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "nightWashStatus", "Night wash", BinarySensorDeviceClass.RUNNING)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "nightWashStatus",
+                        "Night wash",
+                        BinarySensorDeviceClass.RUNNING,
+                    )
+                ]
+            )
         if device.has("steamStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "steamStatus", "Steam", BinarySensorDeviceClass.RUNNING)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "steamStatus",
+                        "Steam",
+                        BinarySensorDeviceClass.RUNNING,
+                    )
+                ]
+            )
         if device.has("energySavingStatus"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "energySavingStatus", "Energy saving", BinarySensorDeviceClass.RUNNING)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "energySavingStatus",
+                        "Energy saving",
+                        BinarySensorDeviceClass.RUNNING,
+                    )
+                ]
+            )
 
         # DW additional binary sensors
         if device.has("extraDry"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "extraDry", "Extra dry", BinarySensorDeviceClass.RUNNING)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "extraDry",
+                        "Extra dry",
+                        BinarySensorDeviceClass.RUNNING,
+                    )
+                ]
+            )
         if device.has("halfLoad"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "halfLoad", "Half load", BinarySensorDeviceClass.RUNNING)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "halfLoad",
+                        "Half load",
+                        BinarySensorDeviceClass.RUNNING,
+                    )
+                ]
+            )
         if device.has("openDoor"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "openDoor", "Open door at end", BinarySensorDeviceClass.RUNNING)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "openDoor",
+                        "Open door at end",
+                        BinarySensorDeviceClass.RUNNING,
+                    )
+                ]
+            )
         if device.has("ecoExpress"):
-            appliances.extend([HonBaseGenericStatus(hass, coordinator, entry, appliance, "ecoExpress", "Eco express", BinarySensorDeviceClass.RUNNING)])
+            appliances.extend(
+                [
+                    HonBaseGenericStatus(
+                        hass,
+                        coordinator,
+                        entry,
+                        appliance,
+                        "ecoExpress",
+                        "Eco express",
+                        BinarySensorDeviceClass.RUNNING,
+                    )
+                ]
+            )
 
     async_add_entities(appliances)
 
 
-
 class HonBaseGenericStatus(HonBaseBinarySensorEntity):
-    def __init__(self, hass, coordinator, entry, appliance, key, name, device_class) -> None:
+    def __init__(
+        self, hass, coordinator, entry, appliance, key, name, device_class
+    ) -> None:
         super().__init__(coordinator, appliance, key, name)
         self._attr_device_class = device_class
-
 
 
 class HonBaseOnOff(HonBaseBinarySensorEntity):
@@ -118,17 +297,25 @@ class HonBaseOnOff(HonBaseBinarySensorEntity):
         if self._device.has("onOffStatus"):
             self._attr_is_on = self._device.get("onOffStatus") == "1"
         else:
-            self._attr_is_on = self._device.get("attributes.lastConnEvent.category") == "CONNECTED"
+            self._attr_is_on = (
+                self._device.get("attributes.lastConnEvent.category") == "CONNECTED"
+            )
+
 
 class HonBaseDoorStatus(HonBaseBinarySensorEntity):
     def __init__(self, hass, coordinator, entry, appliance, zone, zone_name) -> None:
-        super().__init__(coordinator, appliance, "doorStatus" + zone, f"Door status {zone_name}")
+        super().__init__(
+            coordinator, appliance, "doorStatus" + zone, f"Door status {zone_name}"
+        )
 
         self._attr_device_class = BinarySensorDeviceClass.DOOR
 
+
 class HonBaseDoor2Status(HonBaseBinarySensorEntity):
     def __init__(self, hass, coordinator, entry, appliance, zone, zone_name) -> None:
-        super().__init__(coordinator, appliance, "door2Status" + zone, f"Door 2 status {zone_name}")
+        super().__init__(
+            coordinator, appliance, "door2Status" + zone, f"Door 2 status {zone_name}"
+        )
 
         self._attr_device_class = BinarySensorDeviceClass.DOOR
 
@@ -145,6 +332,7 @@ class HonBaseLightStatus(HonBaseBinarySensorEntity):
     @property
     def supported_attributes(self) -> set[str] | None:
         return self._attr_supported_attributes
+
 
 class HonBaseRemoteControl(HonBaseBinarySensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
@@ -173,6 +361,7 @@ class HonBaseChildLockStatus(HonBaseBinarySensorEntity):
 
     def coordinator_update(self):
         self._attr_is_on = self._device.get("lockStatus") == "0"
+
 
 class HonBasePreheating(HonBaseBinarySensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:

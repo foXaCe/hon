@@ -121,14 +121,14 @@
                     "6": "Fan only"
                 }
             },
-            
+
             "holiday_mode": {
                 "state": {
                     "0": "Off",
                     "1": "On"
                 }
             },
-            
+
             "dishwasher_mode" : {
                 "state": {
                     "1": "Ready",
@@ -671,7 +671,7 @@
                     "wool": "Dry Wool",
                     "woolmark": "Wool",
                     "xxl_load": "XXL Load",
-                    "zoom_59": "Zoom 59",                    
+                    "zoom_59": "Zoom 59",
                     "20_degrees_coloured_cottons": "20° Colored and Cottons",
                     "20_degrees_new_energy_label": "20°C",
                     "active_steam": "Steam 29'",
