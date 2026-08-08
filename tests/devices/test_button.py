@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -135,3 +135,33 @@ async def test_hon_base_settings_button_registry_device_id(
     entity.entity_id = entry.entity_id
     await entity.async_press()
     command.dump.assert_called_once()
+
+
+async def test_button_notification_in_french(
+    hass, coordinator, appliance, make_device
+) -> None:
+    """The notification text is localized in French with translated title."""
+    command = make_command()
+    coordinator._device = make_device({})
+    coordinator._device.commands = {"startProgram": command}
+    coordinator._device._type_name = "TD"
+    entity = HonBaseButtonEntity(coordinator, appliance)
+
+    created = []
+    with (
+        patch(
+            "custom_components.hon.devices.button.async_get_cached_translations",
+            return_value={"component.hon.entity.sensor.programs_td.state.eco": "Éco"},
+        ),
+        patch(
+            "custom_components.hon.devices.button.create",
+            side_effect=lambda hass, text, title: created.append((text, title)),
+        ),
+    ):
+        await entity.async_press()
+
+    assert created, "une notification doit être créée"
+    text, title = created[0]
+    assert "Paramètres" in text
+    assert "program: eco" in text  # la valeur du programme reste brute
+    assert title == "Programme [Éco]"

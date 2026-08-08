@@ -19,7 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `system_health.py` (cloud reachability, appliance count, update status)
 - Entity names fully localized (FR/EN) via `translation_key`: sensors, binary sensors, switches, buttons
 - French translations for the config flow and the options flow
-- 406 tests, 96 % coverage
+- Button notifications (programs/settings details) localized in French, with translated program titles
+- Mode/phase/error entity names added (were state-only translations, no `name`)
+- 407 tests, 96 % coverage
 
 ### Changed
 

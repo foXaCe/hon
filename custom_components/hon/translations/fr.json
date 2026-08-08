@@ -97,7 +97,8 @@
           "5": "Planifié",
           "6": "Erreur",
           "7": "Terminé"
-        }
+        },
+        "name": "Mode"
       },
       "wash_program_phase": {
         "state": {
@@ -126,7 +127,8 @@
           "25": "Lavage",
           "26": "Chauffage",
           "27": "Lavage"
-        }
+        },
+        "name": "Phase du programme"
       },
       "climate_mode": {
         "state": {
@@ -135,14 +137,15 @@
           "2": "Séchage",
           "4": "Chauffage",
           "6": "Ventilation seule"
-        }
+        },
+        "name": "Mode"
       },
       "holiday_mode": {
         "state": {
           "0": "Désactivé",
           "1": "Activé"
         },
-        "name": "Mode vacances"
+        "name": "Holiday mode"
       },
       "dishwasher_mode": {
         "state": {
@@ -151,14 +154,16 @@
           "3": "Départ différé",
           "5": "Départ différé annulé",
           "7": "Terminé"
-        }
+        },
+        "name": "Mode"
       },
       "tumbledryer_mode": {
         "state": {
           "1": "Prêt",
           "2": "En cours",
           "7": "Terminé"
-        }
+        },
+        "name": "Mode"
       },
       "purifier_mode": {
         "state": {
@@ -166,7 +171,8 @@
           "1": "Veille",
           "2": "Auto",
           "4": "Max"
-        }
+        },
+        "name": "Mode"
       },
       "air_to_water_mode": {
         "state": {
@@ -179,14 +185,16 @@
           "6": "Auto + ECS",
           "7": "Refroidissement + ECS",
           "8": "Chauffage + ECS"
-        }
+        },
+        "name": "Mode"
       },
       "water_heater_mode": {
         "state": {
           "1": "Éco",
           "2": "Max",
           "3": "BPS"
-        }
+        },
+        "name": "Mode"
       },
       "voc": {
         "state": {
@@ -194,7 +202,8 @@
           "2": "Modéré",
           "3": "Médiocre",
           "4": "Mauvais"
-        }
+        },
+        "name": "Indoor VOC"
       },
       "dry_level": {
         "state": {
@@ -203,7 +212,7 @@
           "13": "Prêt à ranger",
           "14": "Prêt à repasser"
         },
-        "name": "Niveau de séchage"
+        "name": "Dry level"
       },
       "tumbledryer_program": {
         "state": {
@@ -221,7 +230,8 @@
           "85": "Séchage rapide",
           "92": "Délicat",
           "103": "Distant 103"
-        }
+        },
+        "name": "Programme"
       },
       "tumbledryer_program_phase": {
         "state": {
@@ -229,7 +239,8 @@
           "1": "Séchage",
           "2": "Séchage",
           "3": "Refroidissement"
-        }
+        },
+        "name": "Phase du programme"
       },
       "tumbledryer_temp_level": {
         "state": {
@@ -237,12 +248,14 @@
           "2": "Basse température L-1",
           "3": "Température moyenne L-2",
           "4": "Haute température L-3"
-        }
+        },
+        "name": "Niveau de température"
       },
       "error": {
         "state": {
           "00": "Aucun"
-        }
+        },
+        "name": "Erreur"
       },
       "washingmachine_error": {
         "state": {
@@ -250,7 +263,8 @@
           "100000000000": "E2 : vérifiez que la porte est fermée",
           "8000000000000": "E4 : vérifiez l'arrivée d'eau",
           "400000000000000": "Erreur Unb : vérifiez le linge, le lave-linge est peut-être surchargé"
-        }
+        },
+        "name": "Erreur"
       },
       "oven_program": {
         "state": {
@@ -265,7 +279,8 @@
           "25": "Cuisson Taylor",
           "28": "Pizza",
           "54": "Soft+"
-        }
+        },
+        "name": "Programme"
       },
       "dishwasher_program": {
         "state": {
@@ -290,7 +305,8 @@
           "22": "Cycle de désinfection",
           "23": "Soin bébé / Nettoyage super, vapeur plus 75 °C",
           "24": "Hygiène+ 75 °C"
-        }
+        },
+        "name": "Programme"
       },
       "programs_ac": {
         "state": {
@@ -317,7 +333,7 @@
           "iot_uv_and_heat": "UV + Chauffage",
           "iot_warm_spring": "Printemps doux"
         },
-        "name": "Programme"
+        "name": "Program"
       },
       "programs_dw": {
         "state": {
@@ -438,7 +454,7 @@
           "zone_wash": "Lavage zone flexible",
           "zoom_39": "Zoom 39 min"
         },
-        "name": "Programme"
+        "name": "Program"
       },
       "programs_ih": {
         "state": {
@@ -478,7 +494,7 @@
           "iot_standard_melting": "Fonte",
           "iot_standard_simmering": "Mijotage"
         },
-        "name": "Programme"
+        "name": "Program"
       },
       "programs_ov": {
         "state": {
@@ -535,7 +551,7 @@
           "white_meat": "Viande blanche",
           "white_meat_steam": "Viande blanche vapeur"
         },
-        "name": "Programme"
+        "name": "Program"
       },
       "programs_wd": {
         "state": {
@@ -966,7 +982,7 @@
           "wool_dry": "Séchage laine",
           "wool_soft_care": "Laine et soin doux 48 min"
         },
-        "name": "Programme"
+        "name": "Program"
       },
       "programs_td": {
         "state": {
@@ -1118,7 +1134,7 @@
           "xxl_load": "Charge XXL",
           "zoom_59": "Zoom 59"
         },
-        "name": "Programme"
+        "name": "Program"
       },
       "programs_wm": {
         "state": {
@@ -1440,7 +1456,7 @@
           "wool_dry": "Séchage laine",
           "wool_soft_care": "Laine et soin doux 48 min"
         },
-        "name": "Programme"
+        "name": "Program"
       },
       "programs_ref": {
         "state": {
@@ -1470,7 +1486,7 @@
           "vegetables": "Légumes",
           "zero_fresh": "Frais 0 °C"
         },
-        "name": "Programme"
+        "name": "Program"
       },
       "programs_wc": {
         "state": {
@@ -1482,7 +1498,8 @@
           "red": "Rouge",
           "sparkling": "Effervescent",
           "white": "Blanc"
-        }
+        },
+        "name": "Program"
       },
       "lockstatus": {
         "name": "Verrouillage enfant"

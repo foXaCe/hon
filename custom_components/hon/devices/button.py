@@ -5,6 +5,7 @@ from __future__ import annotations
 from homeassistant.components.button import ButtonEntity
 from homeassistant.components.persistent_notification import create
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.translation import async_get_cached_translations
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 
@@ -37,21 +38,31 @@ class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
         if entry:
             device_id = entry.device_id
 
+        translations = async_get_cached_translations(
+            self._coordinator.hass,
+            self._coordinator.hass.config.language,
+            "entity",
+            "hon",
+        )
+        program_key = f"component.hon.entity.sensor.programs_{self._device._type_name.lower()}.state"
+
         for program in programs.keys():
             command.set_program(program)
             command = self._device.commands.get("startProgram")
             alert_text, example = command.dump()
 
-            text = f"""#### Parameters:
+            program_label = translations.get(f"{program_key}.{program}", program)
+
+            text = f"""#### Paramètres :
 {alert_text}
-#### Start this program with default parameters:
+#### Démarrez ce programme avec les paramètres par défaut :
     service: hon.start_program
     data:
       program: {program}
     target:
       device_id: {device_id}
 
-#### Start this program with customized parameters:
+#### Démarrez ce programme avec des paramètres personnalisés :
     service: hon.start_program
     data:
       program: {program}
@@ -60,7 +71,7 @@ class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
     target:
       device_id: {device_id}
 """
-            create(self._coordinator.hass, text, "Program [" + program + "]")
+            create(self._coordinator.hass, text, f"Programme [{program_label}]")
 
 
 class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
@@ -92,9 +103,9 @@ class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
         command = self._device.commands.get("settings")
         alert_text, example = command.dump()
 
-        text = f"""#### Parameters:
+        text = f"""#### Paramètres :
 {alert_text}
-#### Update settings:
+#### Mettez à jour les réglages :
     service: hon.update_settings
     data:
       parameters: >-
@@ -102,4 +113,4 @@ class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
     target:
       device_id: {device_id}
 """
-        create(self._coordinator.hass, text, "Get all settings")
+        create(self._coordinator.hass, text, "Tous les réglages")
