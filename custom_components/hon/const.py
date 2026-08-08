@@ -1,5 +1,7 @@
 """hOn component constants."""
 
+from __future__ import annotations
+
 from enum import IntEnum
 
 from homeassistant.components.climate.const import (
@@ -19,10 +21,19 @@ CONF_COGNITO_TOKEN = "cognito_token"
 CONF_REFRESH_TOKEN = "refresh_token"
 CONF_FRAMEWORK = "framework"
 
-PLATFORMS = ["climate", "water_heater", "sensor", "binary_sensor", "button", "switch"]
+CONF_UPDATE_INTERVAL = "update_interval"
+DEFAULT_SCAN_INTERVAL = 60
 
-"""     "number",
-    "select", """
+PLATFORMS = [
+    "climate",
+    "water_heater",
+    "sensor",
+    "binary_sensor",
+    "button",
+    "switch",
+    "number",
+    "select",
+]
 
 
 AUTH_API = "https://account2.hon-smarthome.com/SmartHome"
@@ -34,6 +45,8 @@ DEVICE_MODEL = "exynos9820"
 
 
 class APPLIANCE_TYPE(IntEnum):
+    """Appliance type identifiers used by the hOn API."""
+
     WASHING_MACHINE = (1,)
     WASH_DRYER = (2,)
     OVEN = (4,)
@@ -63,6 +76,12 @@ APPLIANCE_DEFAULT_NAME = {
     "27": "Air to Water",
 }
 
+# Appliance families that expose multi-program start helpers.
+PROGRAM_HELPER_APPLIANCE_TYPES = {
+    APPLIANCE_TYPE.OVEN,
+    APPLIANCE_TYPE.DISH_WASHER,
+}
+
 CLIMATE_FAN_MODE = {
     FAN_OFF: "0",
     FAN_LOW: "3",
@@ -81,6 +100,8 @@ CLIMATE_HVAC_MODE = {
 
 
 class ClimateSwingVertical:
+    """Vertical swing positions for climate devices."""
+
     AUTO = "8"
     VERY_LOW = "7"
     LOW = "6"
@@ -92,6 +113,8 @@ class ClimateSwingVertical:
 
 
 class ClimateSwingHorizontal:
+    """Horizontal swing positions for climate devices."""
+
     AUTO = "7"
     MIDDLE = "0"
     FAR_LEFT = "3"
@@ -101,37 +124,8 @@ class ClimateSwingHorizontal:
 
 
 class ClimateEcoPilotMode:
+    """Eco pilot modes for climate devices."""
+
     OFF = "0"
     AVOID = "1"
     FOLLOW = "2"
-
-
-# WASHING_MACHINE_DOOR_LOCK_STATUS = {
-#    "1": "Locked",
-#    "0": "Unlocked"
-# }
-
-# WASHING_MACHINE_PROGRAM = {
-#    "0": {
-#        "name": "fragile",
-#        "spinSpeed": "400",
-#        "temp": "30",
-#        "rinseIterations": "1",
-#        "mainWashTime": "10",
-#        "autoSoftenerStatus": "1"
-#                },
-#    "1": {
-#        "name": "quotidien sale",
-#        "spinSpeed": "1400",
-#        "temp": "40",
-#        "rinseIterations": "2",
-#        "mainWashTime": "15",
-#        "autoSoftenerStatus": "1"
-#                },
-# }
-
-# PURIFIER_LIGHT_VALUE  = {
-#    "0": "Off",
-#    "1": "50%",
-#    "2": "100%"
-# }

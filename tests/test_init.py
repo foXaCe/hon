@@ -1,0 +1,144 @@
+"""Tests for the hOn integration entry setup/unload/migration."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import entity_registry as er
+
+from custom_components.hon import (
+    async_migrate_entry,
+    async_setup_entry,
+    async_unload_entry,
+)
+from custom_components.hon.api.exceptions import (
+    HonAuthenticationError,
+    HonConnectionError,
+)
+from custom_components.hon.const import DOMAIN, PLATFORMS
+from tests.conftest import EMAIL
+
+pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
+
+
+def _coordinator_mock() -> MagicMock:
+    """Build a coordinator mock with the device hooks setup expects."""
+    device = MagicMock()
+    device.load_commands = AsyncMock()
+    device.load_statistics = AsyncMock()
+    coordinator = MagicMock()
+    coordinator.device = device
+    coordinator.async_config_entry_first_refresh = AsyncMock()
+    return coordinator
+
+
+async def test_async_setup_entry_success(hass, mock_connection, config_entry) -> None:
+    """A successful setup stores the connection and forwards platforms."""
+    coordinator = _coordinator_mock()
+    mock_connection.async_get_coordinator = AsyncMock(return_value=coordinator)
+
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        patch.object(
+            hass.config_entries, "async_forward_entry_setups", AsyncMock()
+        ) as forward,
+    ):
+        assert await async_setup_entry(hass, config_entry) is True
+
+    assert config_entry.runtime_data is mock_connection
+    forward.assert_awaited_once_with(config_entry, PLATFORMS)
+    coordinator.async_config_entry_first_refresh.assert_awaited_once()
+
+
+async def test_async_setup_entry_auth_failed(
+    hass, mock_connection, config_entry
+) -> None:
+    """An authentication failure raises ConfigEntryAuthFailed."""
+    mock_connection.async_authorize = AsyncMock(
+        side_effect=HonAuthenticationError("bad")
+    )
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        pytest.raises(ConfigEntryAuthFailed),
+    ):
+        await async_setup_entry(hass, config_entry)
+
+
+async def test_async_setup_entry_auth_failed_when_not_ok(
+    hass, mock_connection, config_entry
+) -> None:
+    """A falsy authorize result raises ConfigEntryAuthFailed."""
+    mock_connection.async_authorize = AsyncMock(return_value=False)
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        pytest.raises(ConfigEntryAuthFailed),
+    ):
+        await async_setup_entry(hass, config_entry)
+
+
+async def test_async_setup_entry_not_ready(hass, mock_connection, config_entry) -> None:
+    """A connection failure raises ConfigEntryNotReady."""
+    mock_connection.async_authorize = AsyncMock(side_effect=HonConnectionError("down"))
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        pytest.raises(ConfigEntryNotReady),
+    ):
+        await async_setup_entry(hass, config_entry)
+
+
+async def test_async_unload_entry(hass, mock_connection, config_entry) -> None:
+    """Unloading returns True and closes the connection."""
+    config_entry.runtime_data = mock_connection
+    with patch.object(
+        hass.config_entries, "async_unload_platforms", AsyncMock(return_value=True)
+    ):
+        assert await async_unload_entry(hass, config_entry) is True
+    mock_connection.async_close.assert_awaited_once()
+
+
+async def test_async_unload_entry_failed(hass, mock_connection, config_entry) -> None:
+    """A failed platform unload returns False without closing."""
+    config_entry.runtime_data = mock_connection
+    with patch.object(
+        hass.config_entries, "async_unload_platforms", AsyncMock(return_value=False)
+    ):
+        assert await async_unload_entry(hass, config_entry) is False
+    mock_connection.async_close.assert_not_awaited()
+
+
+async def test_async_migrate_entry_from_v1(hass, config_entry_v1) -> None:
+    """Migration from v1 prefixes entity unique ids with the entry id."""
+    registry = er.async_get(hass)
+    entity = registry.async_get_or_create(
+        "sensor", DOMAIN, "mach_mode", config_entry=config_entry_v1
+    )
+    entity_id = entity.entity_id
+
+    assert await async_migrate_entry(hass, config_entry_v1) is True
+    assert config_entry_v1.version == 2
+    assert registry.async_get(entity_id).unique_id == f"{EMAIL}_mach_mode"
+
+
+async def test_async_migrate_entry_from_v1_preserves_prefix(
+    hass, config_entry_v1
+) -> None:
+    """Entities already carrying the entry prefix are left untouched."""
+    registry = er.async_get(hass)
+    entity = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{EMAIL}_mach_mode",
+        config_entry=config_entry_v1,
+    )
+    entity_id = entity.entity_id
+
+    assert await async_migrate_entry(hass, config_entry_v1) is True
+    assert registry.async_get(entity_id).unique_id == f"{EMAIL}_mach_mode"
+
+
+async def test_async_migrate_entry_skips_current_version(hass, config_entry) -> None:
+    """Entries already on the current version migrate without changes."""
+    assert await async_migrate_entry(hass, config_entry) is True
+    assert config_entry.version == 2

@@ -23,7 +23,7 @@ Home Assistant component supporting all devices integrated with hOn cloud. The o
 
 ## Requirements
 
-- Home Assistant >= 2024.1
+- Home Assistant >= 2026.7
 - An account on the hOn mobile application
 - Supported devices: Haier Climate tested
 
@@ -45,7 +45,11 @@ Home Assistant component supporting all devices integrated with hOn cloud. The o
 
 ## Configuration
 
-Configure the integration with your hOn username and password.
+Configure the integration with your hOn username and password (add → hOn).
+
+After setup, you can open **Options** on the config entry to adjust the polling
+interval (default 60 s, range 30–3600 s). Reauthentication is handled through
+the UI when your credentials expire.
 
 You can launch any available program by using a dedicated service: `hon.start_program`.
 To get all the details about each program, you can go to the device and click on `Get programs details`
@@ -116,6 +120,58 @@ This integration has been tested with the following devices.
 ### Air to Water Heat Pump
 
 - Haier Monobloc GT R290
+
+## Data updates
+
+The integration polls the hOn cloud. Each appliance is refreshed through a
+`DataUpdateCoordinator`; the default polling interval is **60 seconds**
+(configurable in the integration **Options**, from 30 s to 3600 s). Commands
+and statistics are loaded once at setup and refreshed with the device context.
+
+## Use cases
+
+- **Climate automation** — switch your heat pump between heating and cooling
+  based on a sensor or time of day.
+- **Program launch** — start a washing machine, oven or dishwasher program
+  from a dashboard button or an automation.
+- **Consumption tracking** — expose water/electricity usage and wash-cycle
+  counters as regular sensors for energy dashboards.
+
+## Examples
+
+Start a washing machine program from an automation:
+
+```yaml
+automation:
+  - alias: "Lancer le lavage le soir"
+    trigger:
+      platform: time
+      at: "21:00:00"
+    action:
+      service: hon.start_program
+      target:
+        entity_id: sensor.lave_linge_programme
+      data:
+        program: wash_cotton
+        parameters: '{"temp": "40", "spinSpeed": "1200"}'
+```
+
+## Known limitations
+
+- Some appliance programs are only available through the `hon.start_program`
+  service and may not expose every parameter as an individual entity.
+- The hOn cloud is rate-limited; rapid successive commands may be delayed.
+- Not every model of each appliance family is tested — see *Supported devices*.
+
+## Removal
+
+To remove the integration:
+
+1. Go to **Settings → Devices & Services** and delete the *hOn* config entry.
+2. (HACS) In HACS, uninstall *Haier hOn* and delete the downloaded repository
+   if you added it as a custom repository.
+3. (Manual) Remove the `custom_components/hon/` directory.
+4. Restart Home Assistant.
 
 ## Credits
 

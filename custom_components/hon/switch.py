@@ -1,35 +1,27 @@
+"""Switch platform for the hOn integration."""
+
+from __future__ import annotations
+
 import logging
-from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING
 
-from homeassistant.components.switch import SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import callback
+from .devices.switch import HonSwitchEntity, HonSwitchEntityDescription
 
-from .base import HonBaseSwitchEntity
-from .const import DOMAIN
-from .parameter import (
-    HonParameter,
-    HonParameterRange,
-)
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
-
-@dataclass(frozen=True)
-class HonControlSwitchEntityDescription(SwitchEntityDescription):
-    turn_on_key: str = ""
-    turn_off_key: str = ""
+PARALLEL_UPDATES = 1
 
 
-@dataclass(frozen=True)
-class HonSwitchEntityDescription(SwitchEntityDescription):
-    pass
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+) -> None:
+    """Set up the switch platform."""
 
-
-async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> None:
-
-    hon = hass.data[DOMAIN][entry.unique_id]
+    hon = entry.runtime_data
 
     appliances = []
     for appliance in hon.appliances:
@@ -48,7 +40,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("screenDisplayStatus", "N/A") != "N/A"
@@ -62,7 +53,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("muteStatus", "N/A") != "N/A"
@@ -76,7 +66,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("echoStatus", "N/A") != "N/A"
@@ -94,7 +83,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
                     )
                 ]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("rapidMode", "N/A") != "N/A"
@@ -108,7 +96,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("10degreeHeatingStatus", "N/A") != "N/A"
@@ -122,7 +109,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (device.get("ecoMode", "N/A") != "N/A"):
             description = HonSwitchEntityDescription(
@@ -134,7 +120,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (device.get("ecoMode", "N/A") != "N/A"):
             description = HonSwitchEntityDescription(
@@ -146,7 +131,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
         if ("settings" in device.commands) and (
             device.get("healthMode", "N/A") != "N/A"
@@ -160,114 +144,5 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
             appliances.extend(
                 [HonSwitchEntity(hass, coordinator, entry, appliance, description)]
             )
-            await coordinator.async_request_refresh()
 
     async_add_entities(appliances)
-
-
-class HonSwitchEntity(HonBaseSwitchEntity):
-    entity_description: HonSwitchEntityDescription
-
-    def __init__(
-        self, hass, coordinator, entry, appliance, entity_description, invert=False
-    ) -> None:
-        super().__init__(coordinator, appliance, entity_description)
-        self.invert = invert
-
-    def _setting_key(self) -> str:
-        return f"settings.{self.entity_description.key}"
-
-    def _setting(self):
-        return self._device.settings.get(self._setting_key())
-
-    def _target_value(self, turn_on: bool) -> str:
-        value = "1" if turn_on else "0"
-        if self.invert:
-            value = "0" if turn_on else "1"
-        return value
-
-    @property
-    def is_on(self) -> bool | None:
-        """Return True if entity is on."""
-        if self.invert == True:
-            return self._device.get(self.entity_description.key, "1") == "0"
-        return self._device.get(self.entity_description.key, "0") == "1"
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        setting = self._setting()
-        if setting is not None:
-            if type(setting) == HonParameter:
-                return
-            if self.invert:
-                setting.value = (
-                    setting.min if isinstance(setting, HonParameterRange) else 0
-                )
-            else:
-                setting.value = (
-                    setting.max if isinstance(setting, HonParameterRange) else 1
-                )
-            await self._device.commands["settings"].send()
-            value = str(setting.value)
-        else:
-            value = self._target_value(True)
-            await self.coordinator.async_set({self.entity_description.key: value})
-
-        self._device.set(self.entity_description.key, value)
-        self.async_write_ha_state()
-        self.coordinator.async_set_updated_data({})
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        setting = self._setting()
-        if setting is not None:
-            if type(setting) == HonParameter:
-                return
-            if self.invert:
-                setting.value = (
-                    setting.max if isinstance(setting, HonParameterRange) else 1
-                )
-            else:
-                setting.value = (
-                    setting.min if isinstance(setting, HonParameterRange) else 0
-                )
-            await self._device.commands["settings"].send()
-            value = str(setting.value)
-        else:
-            value = self._target_value(False)
-            await self.coordinator.async_set({self.entity_description.key: value})
-
-        self._device.set(self.entity_description.key, value)
-        self.async_write_ha_state()
-        self.coordinator.async_set_updated_data({})
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        if not super().available:
-            _LOGGER.warning("HonSwitchEntity not available: super() is not")
-            return False
-        if not self._device.get("remoteCtrValid", "1") == "1":
-            _LOGGER.warning("HonSwitchEntity not available: remoteCtrValid==1")
-            return False
-        if self._device.get("attributes.lastConnEvent.category") == "DISCONNECTED":
-            _LOGGER.warning("HonSwitchEntity not available: DISCONNECTED")
-            return False
-
-        setting = self._setting()
-
-        if setting is None:
-            return self._device.get(self.entity_description.key, None) is not None
-
-        # _LOGGER.warning(setting)
-        # if isinstance(setting, HonParameterRange) and len(setting.values) < 2:
-        #    return False
-        return True
-
-    @callback
-    def _handle_coordinator_update(self, update: bool = True) -> None:
-        # if( self._key == "screenDisplayStatus" ):
-        #    _LOGGER.warning(f"HonSwitchEntity screenDisplayStatus value {self._device.get(self._key)}" )
-        # if( self._key == "echoStatus" ):
-        #    _LOGGER.warning(f"HonSwitchEntity echoStatus value {self._device.get(self._key)}" )
-        self._attr_is_on = self.is_on
-        if update:
-            self.async_write_ha_state()

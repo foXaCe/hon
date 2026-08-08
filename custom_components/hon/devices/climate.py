@@ -1,0 +1,376 @@
+"""Climate entity classes for hOn devices."""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timedelta
+from typing import Any
+
+from homeassistant.components.climate import (
+    FAN_MEDIUM,
+    FAN_OFF,
+    SWING_BOTH,
+    SWING_HORIZONTAL,
+    SWING_OFF,
+    SWING_VERTICAL,
+    ClimateEntity,
+    ClimateEntityFeature,
+    HVACMode,
+)
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    PRECISION_WHOLE,
+    UnitOfTemperature,
+)
+from homeassistant.core import callback
+from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from ..const import (
+    CLIMATE_FAN_MODE,
+    CLIMATE_HVAC_MODE,
+    DOMAIN,
+    ClimateSwingHorizontal,
+    ClimateSwingVertical,
+)
+from ..helpers import get_key
+from ..parameter import HonParameterRange
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class HonClimateEntity(CoordinatorEntity, ClimateEntity):
+    """Climate entity for an hOn air conditioner."""
+
+    def __init__(self, hass, coordinator, entry, appliance) -> None:
+        """Initialize the climate entity."""
+        super().__init__(coordinator)
+        self._coordinator = coordinator
+        self._hon = entry.runtime_data
+        self._hass = hass
+        self._brand = appliance["brand"]
+        self._mac = appliance["macAddress"]
+        self._name = appliance.get("nickName", appliance.get("modelName", "Climate"))
+        self._connectivity = appliance["connectivity"]
+        self._model = appliance["modelName"]
+        self._series = appliance.get("series", "")
+        self._modelId = appliance["applianceModelId"]
+        self._type_name = appliance["applianceTypeName"]
+        self._serialNumber = appliance["serialNumber"]
+        self._fwVersion = appliance["fwVersion"]
+        self._unique_id = f"{coordinator.unique_id_prefix}_climate"
+        self._available = True
+        self._watcher = None
+        self._device = coordinator.device
+
+        # Not working for Farenheit
+        self._attr_temperature_unit = UnitOfTemperature.CELSIUS  # 'tempUnit': '0'
+
+        self._enable_turn_on_off_backwards_compatibility = False
+        self._attr_fan_modes = []  # [FAN_OFF, FAN_LOW, FAN_MEDIUM, FAN_HIGH, FAN_AUTO]
+        self._attr_hvac_modes = [
+            HVACMode.HEAT,
+            HVACMode.COOL,
+            HVACMode.AUTO,
+            HVACMode.FAN_ONLY,
+            HVACMode.DRY,
+            HVACMode.OFF,
+        ]
+        self._attr_swing_modes = [
+            SWING_OFF,
+            SWING_BOTH,
+            SWING_VERTICAL,
+            SWING_HORIZONTAL,
+        ]
+        self._attr_supported_features = (
+            ClimateEntityFeature.TARGET_TEMPERATURE
+            | ClimateEntityFeature.FAN_MODE
+            | ClimateEntityFeature.SWING_MODE
+            | ClimateEntityFeature.TURN_OFF
+            | ClimateEntityFeature.TURN_ON
+        )
+
+        """ hon specific values """
+        parameters = self._device.settings_command().parameters
+        # _LOGGER.warning(parameters)
+
+        # Set Min / Max temperatures
+        temp_range = parameters.get("tempSel")
+
+        self._attr_target_temperature_step = PRECISION_WHOLE
+        if isinstance(temp_range.step, float):
+            self._attr_target_temperature_step = temp_range.step
+
+        if isinstance(temp_range, HonParameterRange):
+            self._attr_min_temp = temp_range.min
+            self._attr_max_temp = temp_range.max
+
+        # Set Fan mode
+        self._hon_fan_modes = parameters.get("windSpeed").values
+        for fan_mode in self._hon_fan_modes:
+            self._attr_fan_modes.append(get_key(CLIMATE_FAN_MODE, fan_mode, FAN_OFF))
+
+        self._handle_coordinator_update(False)
+
+    async def async_set_sleep_mode(self, sleep_mode=False):
+        """Set the sleep mode."""
+        self._sleep_mode = sleep_mode
+        parameters = {"silentSleepStatus": "1" if sleep_mode else "0"}
+        await self._device.settings_command(parameters).send()
+
+    async def async_set_rapid_mode(self, rapid_mode=False):
+        """Set the rapid mode."""
+        self._rapid_mode = rapid_mode
+        parameters = {"rapidMode": "1" if rapid_mode else "0"}
+        await self._device.settings_command(parameters).send()
+
+    async def async_set_silent_mode(self, silent_mode=False):
+        """Set the silent mode."""
+        self._silent_mode = silent_mode
+        parameters = {"muteStatus": "1" if silent_mode else "0"}
+        await self._device.settings_command(parameters).send()
+
+    async def async_set_screen_display(self, screen_display=True):
+        """Set whether the display stays on."""
+        self._screen_display = screen_display
+        parameters = {"screenDisplayStatus": "1" if screen_display else "0"}
+        await self._device.settings_command(parameters).send()
+
+    async def async_set_echo_mode(self, echo_mode=False):
+        """Set the echo mode."""
+        self._echo_mode = echo_mode
+        parameters = {"echoStatus": "0" if echo_mode else "1"}
+        await self._device.settings_command(parameters).send()
+
+    async def async_set_wind_direction_horizontal(self, value: int):
+        """Set the horizontal wind direction."""
+        self._wind_direction_horizontal = value
+        parameters = {"windDirectionHorizontal": str(value)}
+        await self._device.settings_command(parameters).send()
+
+    async def async_set_wind_direction_vertical(self, value: int):
+        """Set the vertical wind direction."""
+        self._wind_direction_vertical = value
+        parameters = {"windDirectionVertical": str(value)}
+        await self._device.settings_command(parameters).send()
+
+    async def async_set_eco_pilot_mode(self, value: int):
+        """Set the eco pilot mode."""
+        self._eco_pilot_mode = value
+        parameters = {"humanSensingStatus": value}
+        await self._device.settings_command(parameters).send()
+
+    def start_watcher(self, timedelta=timedelta(seconds=8)):
+        """Start a short watcher that suppresses coordinator overwrites."""
+        if self._watcher is not None:
+            self._watcher()
+        self._watcher = async_call_later(
+            self._hass, timedelta, self.async_update_after_state_change
+        )
+        self.async_write_ha_state()
+
+    async def async_update_after_state_change(
+        self, now: datetime | None = None
+    ) -> None:
+        """Clear the state-change watcher."""
+        self._watcher = None
+
+    @callback
+    def _handle_coordinator_update(self, update=True) -> None:
+
+        # Watcher is running, update is not allowed because the data may not be yet accurate
+        if self._watcher != None:
+            return
+
+        self._attr_target_temperature = int(float(self._device.get("tempSel")))
+        self._attr_current_temperature = float(self._device.get("tempIndoor"))
+
+        self._attr_fan_mode = get_key(
+            CLIMATE_FAN_MODE, self._device.get("windSpeed"), self._attr_fan_modes[0]
+        )
+
+        if self._device.get("onOffStatus") == "0":
+            self._attr_hvac_mode = HVACMode.OFF
+        else:
+            self._attr_hvac_mode = get_key(
+                CLIMATE_HVAC_MODE, self._device.get("machMode"), HVACMode.OFF
+            )
+
+        self.update_swing_mode(
+            self._device.get("windDirectionHorizontal"),
+            self._device.get("windDirectionVertical"),
+        )
+
+        self._sleep_mode = self._device.get("silentSleepStatus") == "1"
+        self._echo_mode = self._device.get("echoStatus") == "0"
+        self._screen_display = self._device.get("screenDisplayStatus") == "1"
+        self._rapid_mode = self._device.get("rapidMode") == "1"
+        self._silent_mode = self._device.get("muteStatus") == "1"
+        self._wind_direction_horizontal = self._device.get("windDirectionHorizontal")
+        self._wind_direction_vertical = self._device.get("windDirectionVertical")
+        self._eco_pilot_mode = self._device.get("humanSensingStatus")
+
+        if update:
+            self.async_write_ha_state()
+
+    def update_swing_mode(self, swing_horizontal, swing_vertical):
+        """Update the swing mode from the wind direction values."""
+        self._attr_swing_mode = SWING_OFF
+        if (
+            swing_horizontal == ClimateSwingHorizontal.AUTO
+            and swing_vertical == ClimateSwingVertical.AUTO
+        ):
+            self._attr_swing_mode = SWING_BOTH
+        elif swing_horizontal == ClimateSwingHorizontal.AUTO:
+            self._attr_swing_mode = SWING_HORIZONTAL
+        elif swing_vertical == ClimateSwingVertical.AUTO:
+            self._attr_swing_mode = SWING_VERTICAL
+
+    @property
+    def unique_id(self) -> str:
+        """Return the unique id."""
+        return self._unique_id
+
+    @property
+    def name(self) -> str:
+        """Return the entity name."""
+        return self._name
+
+    @property
+    def available(self):
+        """Return True if entity is available."""
+        return self._available
+
+    @property
+    def device_info(self):
+        """Return the device registry info."""
+        return {
+            "identifiers": {
+                # Serial numbers are unique identifiers within a specific domain
+                (DOMAIN, self._mac, self._type_name)
+            },
+            "name": self._name,
+            "manufacturer": self._brand,
+            "model": self._model,
+            "sw_version": self._fwVersion,
+        }
+
+    @property
+    def state_attributes(self):
+        """Return the climate state attributes."""
+        attr = super().state_attributes
+        attr["sleep_mode"] = self._sleep_mode
+        attr["echo_mode"] = self._echo_mode
+        attr["rapid_mode"] = self._rapid_mode
+        attr["silent_mode"] = self._silent_mode
+        attr["screen_display"] = self._screen_display
+        attr["wind_direction_horizontal"] = self._wind_direction_horizontal
+        attr["wind_direction_vertical"] = self._wind_direction_vertical
+        attr["eco_pilot_mode"] = self._eco_pilot_mode
+        return attr
+
+    async def async_set_temperature(self, **kwargs):
+        """Set new target temperature."""
+        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
+            return False
+        await self._device.settings_command({"tempSel": temperature}).send()
+        self._attr_target_temperature = int(float(temperature))
+        self.start_watcher()
+
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        """Set new target hvac mode."""
+        command = {}
+
+        if hvac_mode == HVACMode.OFF:
+            await self._device.stop_command().send()
+        elif hvac_mode == HVACMode.COOL:
+            await self._device.start_command("iot_cool").send()
+        elif hvac_mode == HVACMode.HEAT:
+            await self._device.start_command("iot_heat").send()
+        elif hvac_mode == HVACMode.DRY:
+            await self._device.start_command("iot_dry").send()
+        elif hvac_mode == HVACMode.AUTO:
+            await self._device.start_command("iot_auto").send()
+        elif hvac_mode == HVACMode.FAN_ONLY:
+            await self._device.start_command("iot_fan").send()
+        self._attr_hvac_mode = hvac_mode
+        self.start_watcher()
+
+    async def async_turn_off(self) -> None:
+        """Turn the device off."""
+        await self._device.stop_command().send()
+        self._attr_hvac_mode = HVACMode.OFF
+        self.start_watcher()
+
+    async def async_turn_on(self) -> None:
+        """Turn the device on."""
+        await self._device.start_command("iot_simple_start").send()
+        self._attr_hvac_mode = get_key(
+            CLIMATE_HVAC_MODE, self._device.get("machMode"), HVACMode.OFF
+        )
+        self.start_watcher()
+
+    async def async_set_fan_mode(self, fan_mode: str):
+        """Set the fan mode."""
+        self._attr_fan_mode = fan_mode
+        await self._device.settings_command(
+            {
+                "windSpeed": CLIMATE_FAN_MODE.get(
+                    fan_mode, CLIMATE_FAN_MODE.get(FAN_MEDIUM)
+                )
+            }
+        ).send()
+        self.start_watcher()
+
+    async def async_set_swing_mode(self, swing_mode: str):
+        """Set the swing mode."""
+        if swing_mode == SWING_BOTH:
+            parameters = {
+                "windDirectionHorizontal": ClimateSwingHorizontal.AUTO,
+                "windDirectionVertical": ClimateSwingVertical.AUTO,
+            }
+
+        elif (
+            swing_mode == SWING_HORIZONTAL
+            and self._device.get("windDirectionVertical") == ClimateSwingVertical.AUTO
+        ):
+            parameters = {
+                "windDirectionHorizontal": ClimateSwingHorizontal.AUTO,
+                "windDirectionVertical": ClimateSwingVertical.MIDDLE,
+            }
+
+        elif swing_mode == SWING_HORIZONTAL:
+            parameters = {"windDirectionHorizontal": ClimateSwingHorizontal.AUTO}
+
+        elif (
+            swing_mode == SWING_VERTICAL
+            and self._device.get("windDirectionHorizontal")
+            == ClimateSwingHorizontal.AUTO
+        ):
+            parameters = {
+                "windDirectionHorizontal": ClimateSwingHorizontal.MIDDLE,
+                "windDirectionVertical": ClimateSwingVertical.AUTO,
+            }
+
+        elif swing_mode == SWING_VERTICAL:
+            parameters = {"windDirectionVertical": ClimateSwingVertical.AUTO}
+
+        else:  # off
+            parameters = {}
+            if (
+                self._device.get("windDirectionHorizontal")
+                == ClimateSwingHorizontal.AUTO
+            ):
+                parameters["windDirectionHorizontal"] = ClimateSwingHorizontal.MIDDLE
+            if self._device.get("windDirectionVertical") == ClimateSwingVertical.AUTO:
+                parameters["windDirectionVertical"] = ClimateSwingVertical.MIDDLE
+
+        self._attr_swing_mode = swing_mode
+        await self._device.settings_command(parameters).send()
+        self.start_watcher()
+
+    async def async_will_remove_from_hass(self):
+        """When entity will be removed from hass."""
+        if self._watcher is not None:
+            self._watcher()
+            self._watcher = None

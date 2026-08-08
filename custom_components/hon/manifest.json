@@ -7,6 +7,7 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/foXaCe/hon/issues",
+  "loggers": ["custom_components.hon"],
   "requirements": ["python-dateutil>=2.8"],
   "version": "0.8.4"
 }

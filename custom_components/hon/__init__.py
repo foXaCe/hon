@@ -1,25 +1,34 @@
+"""hOn (Haier smart home) integration."""
+
+from __future__ import annotations
+
 import ast
+import asyncio
 import logging
 from datetime import datetime
 
 import voluptuous as vol
 from dateutil.tz import gettz
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_DEVICE_ID, CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant, ServiceCall
-
-# from homeassistant.helpers.template import device_id as get_device_id
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    HomeAssistantError,
+)
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
+from .api.client import HonConnection, get_hOn_mac
+from .api.exceptions import HonAuthenticationError, HonConnectionError
 from .const import DOMAIN, PLATFORMS
-from .device import HonDevice
-from .hon import HonConnection, get_hOn_mac
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_REGISTRY = "service_registry"
+
+
+type HonConfigEntry = ConfigEntry[HonConnection]
 
 
 HON_SCHEMA = vol.Schema(
@@ -34,23 +43,23 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-# TODO merge all programes names in language file
-
 
 # This method will update a sensor value with the targetted one for a better user experience
 def update_sensor(hass, device_id, mac, sensor_name, state):
+    """Update the matching sensor with the given state."""
 
     entity_reg = er.async_get(hass)
     entries = er.async_entries_for_device(entity_reg, device_id)
 
     # Loop over all entries and update the good one
     for entry in entries:
-        if entry.unique_id == mac + "_" + sensor_name:
+        if entry.unique_id.endswith("_" + mac + "_" + sensor_name):
             inputStateObject = hass.states.get(entry.entity_id)
             hass.states.async_set(entry.entity_id, state, inputStateObject.attributes)
 
 
 def get_parameters(call):
+    """Parse the parameters string from a service call."""
     parameters_str = call.data.get("parameters", "{}")
     if type(parameters_str) != str:
         parameters_str = str(parameters_str)
@@ -62,15 +71,8 @@ def _minutes_until(target: datetime, now: datetime) -> int:
     return max(0, int((target - now).total_seconds() / 60))
 
 
-# def get_device_ids(hass, call):
-#    device_ids = call.data.get("device_id", [])
-# entity_ids = call.data.get("entity_id", [])
-# for entity_id in entity_ids:
-# device_ids.append(get_device_id(hass, entity_id))
-# return list(dict.fromkeys(device_ids))
-
-
 def get_device_ids(hass, call):
+    """Return the target device ids from a service call."""
     device_ids = set(call.data.get("device_id", []))
     entity_ids = call.data.get("entity_id", [])
 
@@ -84,45 +86,73 @@ def get_device_ids(hass, call):
     return list(device_ids)
 
 
-async def async_get_device_ids(hass, call):
-    device_ids = set(call.data.get("device_id", []))
-    entity_ids = call.data.get("entity_id", [])
+async def async_migrate_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
+    """Migrate a config entry to a newer version.
 
-    ent_reg = er.async_get(hass)
+    Version 2 prefixes every entity unique id with ``{entry.unique_id}_`` so
+    that ids are namespaced per config entry (Quality Scale Gold format).
+    """
+    if entry.version != 1:
+        return True
 
-    for entity_id in entity_ids:
-        entry = ent_reg.async_get(entity_id)
-        if entry and entry.device_id:
-            device_ids.add(entry.device_id)
+    _LOGGER.info(
+        "Migrating %s config entry from version %s", entry.title, entry.version
+    )
 
-    return list(device_ids)
+    registry = er.async_get(hass)
+    uid_prefix = f"{entry.unique_id}_"
+
+    @callback
+    def update_unique_id(entity_entry: er.RegistryEntry) -> dict[str, str] | None:
+        if entity_entry.unique_id.startswith(uid_prefix):
+            return None
+        return {"new_unique_id": f"{uid_prefix}{entity_entry.unique_id}"}
+
+    await er.async_migrate_entries(hass, entry.entry_id, update_unique_id)
+    hass.config_entries.async_update_entry(entry, version=2)
+    _LOGGER.info("Migrated %s config entry to version 2", entry.title)
+    return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
+    """Set up the hOn integration for a config entry."""
     hon = HonConnection(hass, entry)
     try:
         result = await hon.async_authorize()
-    except Exception as e:
-        raise ConfigEntryNotReady(f"hOn connection failed: {e}") from e
+    except HonConnectionError as err:
+        raise ConfigEntryNotReady(f"hOn connection failed: {err}") from err
+    except HonAuthenticationError as err:
+        raise ConfigEntryAuthFailed(
+            translation_domain=DOMAIN, translation_key="auth_failed"
+        ) from err
     if not result:
-        raise ConfigEntryNotReady("hOn authentication failed")
+        raise ConfigEntryAuthFailed(
+            translation_domain=DOMAIN, translation_key="auth_failed"
+        )
 
-    # Log all appliances
-    _LOGGER.debug(f"Appliances: {hon.appliances}")
+    # Log the appliance count only (MAC addresses are identifiers)
+    _LOGGER.debug("Appliances loaded: %d", len(hon.appliances))
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.unique_id] = hon
-    hass.data[DOMAIN].setdefault(SERVICE_REGISTRY, set())
+    entry.runtime_data = hon
 
-    for appliance in hon.appliances:
-        coordinator = await hon.async_get_coordinator(appliance)
-        coordinator.device = HonDevice(hon, coordinator, appliance)
-        await coordinator.async_config_entry_first_refresh()
-
-        await coordinator.device.load_commands()
-        await coordinator.device.load_statistics()
+    # Load every appliance context in parallel to keep the boot fast.
+    coordinators = [
+        await hon.async_get_coordinator(appliance) for appliance in hon.appliances
+    ]
+    await asyncio.gather(
+        *(
+            coordinator.async_config_entry_first_refresh()
+            for coordinator in coordinators
+        )
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    async def _update_listener(hass: HomeAssistant, entry: HonConfigEntry) -> None:
+        """Handle options update."""
+        await hass.config_entries.async_reload(entry.entry_id)
+
+    entry.async_on_unload(entry.add_update_listener(_update_listener))
 
     async def handle_oven_start(call):
 
@@ -256,11 +286,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         mac = get_hOn_mac(call.data.get("device"), hass)
 
-        json = await hon.async_get_state(mac, "WM")
+        coordinator = await hon.async_get_existing_coordinator(mac)
+        if (
+            coordinator is None
+            or coordinator.device.get("attributes.lastConnEvent.category")
+            == "DISCONNECTED"
+        ):
+            _LOGGER.error("This hOn device is disconnected")
+            return
 
-        if json["category"] != "DISCONNECTED":
-            return await hon.async_set(mac, "WM", parameters)
-        _LOGGER.error(f"This hOn device is disconnected - Mac address [{mac}]")
+        return await hon.async_set(mac, "WM", parameters)
 
     async def handle_purifier_start(call):
 
@@ -315,6 +350,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         await coordinator.async_set(parameters)
         await coordinator.async_request_refresh()
 
+    async def handle_oven_off(call):
+        parameters = {"onOffStatus": "0", "prPosition": "0", "prCode": "0"}
+        mac = get_hOn_mac(call.data.get("device"), hass)
+        return await hon.async_set(mac, "OV", parameters)
+
+    async def handle_washingmachine_off(call):
+        mac = get_hOn_mac(call.data.get("device"), hass)
+        return await hon.async_set(mac, "WM", {"onOffStatus": "0"})
+
+    async def handle_purifier_off(call):
+        parameters = {"onOffStatus": "0", "machMode": "1"}
+        mac = get_hOn_mac(call.data.get("device"), hass)
+        return await hon.async_set(mac, "AP", parameters)
+
     async def handle_light_on(call):
         device_id = call.data.get("device")
         mac = get_hOn_mac(device_id, hass)
@@ -323,30 +372,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         coordinator = await hon.async_get_existing_coordinator(mac)
         await coordinator.async_set({"lightStatus": "1"})
         await coordinator.async_request_refresh()
-
-        # entity_registry = er.async_get(hass)
-        # entries         = er.async_entries_for_device(entity_registry, device_id)
-
-        # for entry in entries:
-        #    _LOGGER.warning(entry.entity_id)
-        #    parameters  = {"lightStatus": "1"}
-        #    await entity.async_set(parameters)
-        #    break
-        #
-        # device_registry = dr.async_get(hass)
-        # device = device_registry.async_get(device_id)
-        # identifiers = next(iter(device.identifiers))
-        #
-
-        # mac         = identifiers[1]
-        # type_name   = identifiers[2]
-
-        # parameters  = {"lightStatus": "1"}
-        # await hon.async_set(mac, type_name, parameters)
-
-        # update_sensor(hass, device_id, mac, "light_status" , "on")
-
-        # return await hon.async_set_parameter(call.data.get("device_id")[0], parameters)
 
     async def handle_light_off(call):
         device_id = call.data.get("device")
@@ -376,19 +401,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         await coordinator.async_request_refresh()
 
     async def handle_start_program(call):
-        # device_ids = call.data.get("device_id", [])
-        # entity_ids = call.data.get("entity_id", [])
-        # for entity_id in entity_ids:
-        #    device_ids.append(get_device_id(hass, entity_id))
-        # device_ids = list(dict.fromkeys(device_ids))
-
         device_ids = get_device_ids(hass, call)
 
         for device_id in device_ids:
-            # mac = get_hOn_mac(device_id, hass)
-            # coordinator = await hon.async_get_existing_coordinator(mac)
-            # device = coordinator.device
-
             device = hon.get_device(hass, device_id)
             command = device.commands.get("startProgram")
             programs = command.get_programs()
@@ -403,9 +418,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             await device.start_command(program, parameters).send()
 
     async def handle_custom_request(call):
-        # device_id   = call.data.get("device")
-        # mac         = get_hOn_mac(device_id, hass)
-        # coordinator = await hon.async_get_existing_coordinator(mac)
         device_ids = get_device_ids(hass, call)
         parameters = get_parameters(call)
         for device_id in device_ids:
@@ -423,9 +435,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         parameters = get_parameters(call)
 
         for device_id in device_ids:
-            # mac = get_hOn_mac(device_id, hass)
-            # coordinator = await hon.async_get_existing_coordinator(mac)
-            # device = coordinator.device
             device = hon.get_device(hass, device_id)
             await device.settings_command(parameters).send()
 
@@ -438,20 +447,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         for device_id in device_ids:
             device = hon.get_device(hass, device_id)
-            _LOGGER.warning(device)
             results[device_id] = device.get(parameter)
 
-        # Retourner la valeur (optionnel : log pour voir dans les logs)
-        _LOGGER.warning("get_setting results: %s", results)
-        # On émet un événement avec les résultats
+        _LOGGER.debug("get_setting results: %s", results)
         hass.bus.async_fire("hon_get_setting_result", {"results": results})
         return results
 
     services = {
         "turn_on_washingmachine": handle_washingmachine_start,
+        "turn_off_washingmachine": handle_washingmachine_off,
         "turn_on_oven": handle_oven_start,
+        "turn_off_oven": handle_oven_off,
         "turn_on_dishwasher": handle_dishwasher_start,
         "turn_on_purifier": handle_purifier_start,
+        "turn_off_purifier": handle_purifier_off,
         "set_auto_mode_purifier": handle_purifier_automode,
         "set_sleep_mode_purifier": handle_purifier_sleepmode,
         "set_max_mode_purifier": handle_purifier_maxmode,
@@ -467,7 +476,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         "get_setting": async_get_setting,
     }
 
-    registered_services = hass.data[DOMAIN][SERVICE_REGISTRY]
+    registered_services = hass.data.setdefault(DOMAIN, {}).setdefault(
+        SERVICE_REGISTRY, set()
+    )
     for service_name, handler in services.items():
         if service_name in registered_services:
             continue
@@ -482,22 +493,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if not unload_ok:
         return False
 
-    hon = hass.data[DOMAIN].pop(entry.unique_id, None)
-    if hon is not None:
-        await hon.async_close()
-
-    remaining_entries = [
-        key for key in hass.data.get(DOMAIN, {}) if key != SERVICE_REGISTRY
-    ]
-    if not remaining_entries:
-        for service_name in hass.data[DOMAIN].get(SERVICE_REGISTRY, set()):
-            hass.services.async_remove(DOMAIN, service_name)
-        hass.data.pop(DOMAIN, None)
+    hon = entry.runtime_data
+    await hon.async_close()
 
     return True

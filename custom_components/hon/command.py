@@ -1,4 +1,7 @@
-# All credits to https://github.com/Andre0512/pyhOn
+"""hOn command model."""
+
+from __future__ import annotations
+
 import logging
 
 from .parameter import (
@@ -12,7 +15,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HonCommand:
+    """A command with its parameters for an appliance."""
+
     def __init__(self, name, attributes, connector, device, multi=None, program=""):
+        """Initialize the command from its attributes."""
         self._connector = connector
         self._device = device
         self._name = name
@@ -43,16 +49,19 @@ class HonCommand:
 
     @property
     def parameters(self):
+        """Return the command parameters."""
         return self._parameters
 
     @property
     def ancillary_parameters(self):
+        """Return the ancillary parameter values."""
         return {
             key: parameter.value
             for key, parameter in self._ancillary_parameters.items()
         }
 
     async def send(self):
+        """Send the command to the cloud."""
         parameters = {
             name: parameter.value for name, parameter in self._parameters.items()
         }
@@ -61,9 +70,11 @@ class HonCommand:
         )
 
     def get_programs(self):
+        """Return the available programs."""
         return self._multi
 
     def set_program(self, program):
+        """Select a program for the command."""
         self._multi[program]._multi = self._multi
         self._device.commands[self._name] = self._multi[program]
 
@@ -79,6 +90,7 @@ class HonCommand:
 
     @property
     def setting_keys(self):
+        """Return the keys of the settable parameters."""
         if not self._multi:
             return self._get_settings_keys()
         result = [
@@ -109,6 +121,7 @@ class HonCommand:
         return result
 
     def dump(self):
+        """Return a text dump and an example parameter dict."""
         text = ""
         example = "{"
         for key, parameter in self._parameters.items():
