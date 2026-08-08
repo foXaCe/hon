@@ -89,7 +89,7 @@ class HonBaseBinarySensorEntity(HonBaseEntity, BinarySensorEntity):
         super().__init__(coordinator, appliance)
         self._key = key
         self._attr_unique_id = self._unique_id_from_key(key, sensor_name)
-        self._attr_name = sensor_name
+        self._attr_translation_key = snake_case(key or sensor_name)
         self.coordinator_update()
 
     def coordinator_update(self) -> None:
@@ -110,7 +110,7 @@ class HonBaseSensorEntity(HonBaseEntity, SensorEntity):
         super().__init__(coordinator, appliance)
         self._key = key
         self._attr_unique_id = self._unique_id_from_key(key, sensor_name)
-        self._attr_name = sensor_name
+        self._attr_translation_key = snake_case(key or sensor_name)
         self.coordinator_update()
 
     def coordinator_update(self) -> None:

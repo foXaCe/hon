@@ -11,6 +11,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
     """Button that dumps the start program parameters."""
 
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, appliance) -> None:
         """Initialize the button entity."""
         super().__init__(coordinator)
@@ -18,7 +20,7 @@ class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
         self._device = coordinator.device
 
         self._attr_unique_id = f"{coordinator.unique_id_prefix}_start_button"
-        self._attr_name = "Get programs details"
+        self._attr_translation_key = "start_button"
 
     @property
     def device_info(self):
@@ -64,6 +66,8 @@ class HonBaseButtonEntity(CoordinatorEntity, ButtonEntity):
 class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
     """Button that dumps the settings parameters."""
 
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, appliance) -> None:
         """Initialize the button entity."""
         super().__init__(coordinator)
@@ -71,7 +75,7 @@ class HonBaseSettingsButtonEntity(CoordinatorEntity, ButtonEntity):
         self._device = coordinator.device
 
         self._attr_unique_id = f"{coordinator.unique_id_prefix}_settings_button"
-        self._attr_name = "Get settings details"
+        self._attr_translation_key = "settings_button"
 
     @property
     def device_info(self):

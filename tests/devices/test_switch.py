@@ -36,9 +36,9 @@ def switch(coordinator, appliance, make_device) -> HonSwitchEntity:
 
 
 async def test_switch_unique_id_and_name(switch) -> None:
-    """The switch derives its unique id and name from the description."""
+    """The switch derives its unique id and translation key from the description."""
     assert switch.unique_id == f"{MAC}_mute_status"
-    assert switch.name == "Silent Mode"
+    assert switch.translation_key == "silent_mode"
 
 
 def test_switch_is_on(coordinator, appliance, make_device) -> None:

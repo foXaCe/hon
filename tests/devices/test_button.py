@@ -29,7 +29,7 @@ async def test_hon_base_button_entity(coordinator, appliance, make_device) -> No
     entity = HonBaseButtonEntity(coordinator, appliance)
 
     assert entity.unique_id == f"{MAC}_start_button"
-    assert entity.name == "Get programs details"
+    assert entity.translation_key == "start_button"
     await entity.async_press()
     command.set_program.assert_called_once_with("eco")
     command.dump.assert_called()
@@ -56,7 +56,7 @@ async def test_hon_base_settings_button_entity(
     entity = HonBaseSettingsButtonEntity(coordinator, appliance)
 
     assert entity.unique_id == f"{MAC}_settings_button"
-    assert entity.name == "Get settings details"
+    assert entity.translation_key == "settings_button"
     await entity.async_press()
     command.dump.assert_called_once()
 

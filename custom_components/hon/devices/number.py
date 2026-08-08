@@ -9,6 +9,7 @@ from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from ..helpers import snake_case
 from ..parameter import HonParameterRange
 from .base import HonBaseEntity
 
@@ -53,7 +54,7 @@ class HonBaseNumberEntity(HonBaseEntity, NumberEntity):
         super().__init__(coordinator, appliance)
         self._key = key
         self._attr_unique_id = self._unique_id_from_key(key, sensor_name)
-        self._attr_name = sensor_name
+        self._attr_translation_key = snake_case(key or sensor_name)
         self.coordinator_update()
 
     @callback
@@ -74,6 +75,7 @@ class HonNumber(HonBaseNumberEntity):
         """Initialize the number entity."""
         super().__init__(coordinator, appliance, description.key, description.name)
         self.entity_description = description
+        self._attr_translation_key = description.translation_key
         self._attr_unique_id = (
             f"{coordinator.unique_id_prefix}-number-{description.key}"
         )

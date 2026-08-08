@@ -39,7 +39,7 @@ def test_hon_base_number_entity(coordinator, appliance, make_device) -> None:
     entity = HonBaseNumberEntity(coordinator, appliance, "tempLevel", "Temp level")
 
     assert entity.unique_id == f"{MAC}_temp_level"
-    assert entity.name == "Temp level"
+    assert entity.translation_key == "temp_level"
     assert entity.native_value == "40"
 
 

@@ -26,6 +26,7 @@ Le cœur du fonctionnement :
 - **`helpers.py`** : fonctions pures (`snake_case`, `get_key`, `minutes_until`).
 - **`__init__.py`** : setup/unload de l'entry (`entry.runtime_data`), `async_migrate_entry` (v1→v2), enregistrement des 28 services.
 - **`config_flow.py`** : ConfigFlow (user/reauth/reconfigure) + OptionsFlow (`update_interval`).
+- **`diagnostics.py`** : `async_get_config_entry_diagnostics` — snapshot entry/appliances/coordinators/devices/entities, secrets redactés.
 - **`const.py`** : toutes les constantes (API URL, types d'appareils, mappings modes).
 
 ## Ajouter un nouveau type de device

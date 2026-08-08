@@ -34,7 +34,7 @@ class HonSelect(HonBaseEntity, SelectEntity):
         """Initialize the select entity."""
         super().__init__(coordinator, appliance)
         self.entity_description = description
-        self._attr_name = description.name
+        self._attr_translation_key = description.translation_key
         self._attr_unique_id = (
             f"{coordinator.unique_id_prefix}-select-{description.key}"
         )

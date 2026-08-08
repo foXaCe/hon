@@ -52,7 +52,7 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
-        return HonOptionsFlowHandler(config_entry)
+        return HonOptionsFlowHandler()
 
     async def async_step_user(self, user_input=None):
         """Handle a flow initiated by the user."""

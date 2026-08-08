@@ -35,7 +35,7 @@ def test_hon_base_binary_sensor_entity(coordinator, appliance, make_device) -> N
     entity = HonBaseBinarySensorEntity(coordinator, appliance, "doorStatus", "Door")
 
     assert entity.unique_id == f"{MAC}_door_status"
-    assert entity.name == "Door"
+    assert entity.translation_key == "door_status"
     assert entity.is_on is True
 
 
@@ -153,6 +153,6 @@ def test_binary_sensor_classes_smoke(
     coordinator._device = make_device(dict(full_data))
     entity = builder(coordinator, appliance)
     assert entity.unique_id.startswith(MAC)
-    assert entity.name
+    assert entity.translation_key
     entity.coordinator_update()
     assert entity.is_on is not None

@@ -22,6 +22,13 @@
         "data": {
           "password": "Password"
         }
+      },
+      "init": {
+        "title": "Options",
+        "description": "Configure the hOn polling interval.",
+        "data": {
+          "update_interval": "Update interval (seconds)"
+        }
       }
     },
     "error": {
@@ -134,7 +141,8 @@
         "state": {
           "0": "Off",
           "1": "On"
-        }
+        },
+        "name": "Holiday mode"
       },
       "dishwasher_mode": {
         "state": {
@@ -194,7 +202,8 @@
           "12": "Extra Dry",
           "13": "Ready to Store",
           "14": "Ready to Iron"
-        }
+        },
+        "name": "Dry level"
       },
       "tumbledryer_program": {
         "state": {
@@ -1477,11 +1486,309 @@
       },
       "lockstatus": {
         "name": "Child lock"
+      },
+      "actual_weight": {
+        "name": "Estimated weight"
+      },
+      "air_quality": {
+        "name": "Air quality"
+      },
+      "co_level": {
+        "name": "CO level"
+      },
+      "delay_time": {
+        "name": "Delay time"
+      },
+      "detergent_percent": {
+        "name": "Detergent level"
+      },
+      "displayed_app": {
+        "name": "Displayed app"
+      },
+      "main_filter_status": {
+        "name": "Main filter"
+      },
+      "pm10_value_indoor": {
+        "name": "Indoor PM 10"
+      },
+      "pm2p5_value_indoor": {
+        "name": "Indoor PM 2.5"
+      },
+      "power": {
+        "name": "Power"
+      },
+      "pr_code": {
+        "name": "Program code"
+      },
+      "pr_time": {
+        "name": "Program duration"
+      },
+      "pre_filter_status": {
+        "name": "Pre filter"
+      },
+      "remaining_time_m_m": {
+        "name": "Remaining time"
+      },
+      "spin_speed": {
+        "name": "Spin speed"
+      },
+      "total_wash_cycle": {
+        "name": "Total wash cycle"
+      },
+      "total_water_used": {
+        "name": "Total water used"
+      },
+      "total_work_time": {
+        "name": "Total work time"
+      },
+      "voc_value_indoor": {
+        "name": "Indoor VOC"
+      },
+      "volume": {
+        "name": "Volume"
+      },
+      "water_hardness": {
+        "name": "Water hardness"
+      },
+      "start_time": {
+        "name": "Start time"
+      },
+      "end_time": {
+        "name": "End time"
+      },
+      "mean_water_consumption": {
+        "name": "Mean water consumption"
+      },
+      "program_name": {
+        "name": "Program name"
+      },
+      "statistics_programs_counter": {
+        "name": "Total programs"
+      },
+      "current_wash_cycle": {
+        "name": "Current wash cycle"
+      },
+      "current_water_used": {
+        "name": "Current water used"
+      },
+      "current_electricity_used": {
+        "name": "Current electricity used"
+      },
+      "total_electricity_used": {
+        "name": "Total electricity used"
+      },
+      "weight": {
+        "name": "Estimated weight"
+      },
+      "errors": {
+        "name": "Error"
+      },
+      "temp": {
+        "name": "Temperature"
+      },
+      "temp_env": {
+        "name": "Environment temperature"
+      },
+      "temp_indoor": {
+        "name": "Indoor temperature"
+      },
+      "temp_outdoor": {
+        "name": "Outdoor temperature"
+      },
+      "temp_sel": {
+        "name": "Selected temperature"
+      },
+      "temp_sel_z1": {
+        "name": "Selected temperature zone 1"
+      },
+      "temp_sel_z2": {
+        "name": "Selected temperature zone 2"
+      },
+      "temp_sel_z3": {
+        "name": "Selected temperature zone 3"
+      },
+      "temp_z1": {
+        "name": "Temperature zone 1"
+      },
+      "temp_z2": {
+        "name": "Temperature zone 2"
+      },
+      "temp_z3": {
+        "name": "Temperature zone 3"
+      },
+      "temp_dhw": {
+        "name": "Temperature domestic hot water"
+      },
+      "temp_sel_dhw": {
+        "name": "Selected temperature domestic hot water"
+      },
+      "humidity": {
+        "name": "Humidity"
+      },
+      "humidity_z1": {
+        "name": "Humidity zone 1"
+      },
+      "humidity_z2": {
+        "name": "Humidity zone 2"
+      },
+      "humidity_indoor": {
+        "name": "Humidity indoor"
+      },
+      "humidity_outdoor": {
+        "name": "Humidity outdoor"
+      },
+      "humidity_env": {
+        "name": "Humidity environment"
+      },
+      "quick_mode_z1": {
+        "name": "Quick mode Zone 1"
+      },
+      "quick_mode_z2": {
+        "name": "Quick mode Zone 2"
+      },
+      "intelligence_mode": {
+        "name": "Intelligence mode"
+      },
+      "sterilization_status": {
+        "name": "Sterilization status"
+      },
+      "remaining_rinse_iterations": {
+        "name": "Remaining rinse iterations"
+      },
+      "remaining_volume_hot_water": {
+        "name": "Remaining hot water"
+      },
+      "haier_detergent_weight": {
+        "name": "Detergent weight"
+      },
+      "haier_softener_weight": {
+        "name": "Softener weight"
+      },
+      "pr_phase": {
+        "name": "Program phase"
+      },
+      "mach_mode": {
+        "name": "Mode"
       }
     },
     "binary_sensor": {
       "lockstatus": {
         "name": "Child lock"
+      },
+      "on_off_status": {
+        "name": "Status"
+      },
+      "door_status": {
+        "name": "Door status"
+      },
+      "door_status_z1": {
+        "name": "Door status zone 1"
+      },
+      "door_status_z2": {
+        "name": "Door status zone 2"
+      },
+      "door2_status_z1": {
+        "name": "Door status zone 1"
+      },
+      "door2_status_z2": {
+        "name": "Door status zone 2"
+      },
+      "door_lock_status": {
+        "name": "Door lock"
+      },
+      "light_status": {
+        "name": "Light"
+      },
+      "remote_ctr_valid": {
+        "name": "Remote control"
+      },
+      "preheat_status": {
+        "name": "Preheating"
+      },
+      "health_mode": {
+        "name": "Health mode"
+      },
+      "mute_status": {
+        "name": "Mute"
+      },
+      "pause": {
+        "name": "Paused"
+      },
+      "defrost_status": {
+        "name": "Defrost status"
+      },
+      "salt_status": {
+        "name": "Salt"
+      },
+      "rinse_aid_status": {
+        "name": "Rinse aid"
+      },
+      "heating_status": {
+        "name": "Heating"
+      },
+      "anode_maintenance_status": {
+        "name": "Anode maintenance"
+      },
+      "tank_maintenance_status": {
+        "name": "Tank maintenance"
+      },
+      "night_wash_status": {
+        "name": "Night wash"
+      },
+      "steam_status": {
+        "name": "Steam"
+      },
+      "energy_saving_status": {
+        "name": "Energy saving"
+      },
+      "extra_dry": {
+        "name": "Extra dry"
+      },
+      "half_load": {
+        "name": "Half load"
+      },
+      "open_door": {
+        "name": "Open door at end"
+      },
+      "eco_express": {
+        "name": "Eco express"
+      }
+    },
+    "switch": {
+      "sleep_mode": {
+        "name": "Sleep Mode"
+      },
+      "screen_display_status": {
+        "name": "Screen Display"
+      },
+      "silent_mode": {
+        "name": "Silent Mode"
+      },
+      "echo_status": {
+        "name": "Echo"
+      },
+      "rapid_mode": {
+        "name": "Rapid Mode"
+      },
+      "10_degree_heating": {
+        "name": "10° Heating"
+      },
+      "eco_mode": {
+        "name": "Eco Mode"
+      },
+      "turbo_mode": {
+        "name": "Turbo Mode"
+      },
+      "health_mode": {
+        "name": "Health Mode"
+      }
+    },
+    "button": {
+      "start_button": {
+        "name": "Get programs details"
+      },
+      "settings_button": {
+        "name": "Get settings details"
       }
     }
   },

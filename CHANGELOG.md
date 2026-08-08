@@ -15,7 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reauth and reconfiguration flows
 - Diagnostics-ready typed exceptions (`HonAuthenticationError`, `HonConnectionError`, `HonRateLimitError`)
 - `number` and `select` platforms (were dead code) with working command sending
-- 402 tests, 96 % coverage
+- `diagnostics.py` (entry/appliance/coordinator/device/entity snapshot, secrets redacted)
+- Entity names fully localized (FR/EN) via `translation_key`: sensors, binary sensors, switches, buttons
+- French translations for the config flow and the options flow
+- 404 tests, 96 % coverage
 
 ### Changed
 
@@ -28,11 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shared aiohttp session, 30 s timeout, exponential backoff retry, token refresh on 401
 - `from __future__ import annotations`, strict typing, docstrings everywhere
 - English translations cleaned (broken keys, duplicate states, newline keys)
+- Entity names moved from hard-coded English `_attr_name` to `translation_key` (HA resolves FR/EN from translations)
 - Service YAML defaults/tools aligned with handlers
 
 ### Fixed
 
 - Options flow crash on HA ≥ 2026.7 (overwrote read-only `config_entry`)
+- Config flow options handler raised 500 on load (constructor signature mismatch)
 - `HonDevice.set` never persisted values (wrote into a recreated dict)
 - Orphan services `turn_off_oven`, `turn_off_washingmachine`, `turn_off_purifier` now have handlers
 - Deprecated `CONCENTRATION_*` constants replaced with `UnitOfDensity`/`UnitOfRatio`

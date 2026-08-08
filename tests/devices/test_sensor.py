@@ -66,7 +66,7 @@ def test_hon_base_sensor_entity(coordinator, appliance, make_device) -> None:
     entity = HonBaseSensorEntity(coordinator, appliance, "tempSel", "Temperature")
 
     assert entity.unique_id == f"{MAC}_temp_sel"
-    assert entity.name == "Temperature"
+    assert entity.translation_key == "temp_sel"
     assert entity.native_value == "40"
 
 
@@ -460,7 +460,7 @@ def test_sensor_classes_smoke(
     entity = builder(coordinator, appliance)
 
     assert entity.unique_id.startswith(MAC)
-    assert entity.name
+    assert entity.translation_key
     entity.coordinator_update()
     assert entity.native_value is not None
 

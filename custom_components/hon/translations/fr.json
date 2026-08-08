@@ -22,6 +22,13 @@
         "data": {
           "password": "Mot de passe"
         }
+      },
+      "init": {
+        "title": "Options",
+        "description": "Configurez l'intervalle d'interrogation hOn.",
+        "data": {
+          "update_interval": "Intervalle de mise à jour (secondes)"
+        }
       }
     },
     "error": {
@@ -134,7 +141,8 @@
         "state": {
           "0": "Désactivé",
           "1": "Activé"
-        }
+        },
+        "name": "Mode vacances"
       },
       "dishwasher_mode": {
         "state": {
@@ -194,7 +202,8 @@
           "12": "Extra sec",
           "13": "Prêt à ranger",
           "14": "Prêt à repasser"
-        }
+        },
+        "name": "Niveau de séchage"
       },
       "tumbledryer_program": {
         "state": {
@@ -1477,11 +1486,309 @@
       },
       "lockstatus": {
         "name": "Verrouillage enfant"
+      },
+      "actual_weight": {
+        "name": "Poids estimé"
+      },
+      "air_quality": {
+        "name": "Qualité de l'air"
+      },
+      "co_level": {
+        "name": "Niveau de CO"
+      },
+      "delay_time": {
+        "name": "Départ différé"
+      },
+      "detergent_percent": {
+        "name": "Niveau de lessive"
+      },
+      "displayed_app": {
+        "name": "Application affichée"
+      },
+      "main_filter_status": {
+        "name": "Filtre principal"
+      },
+      "pm10_value_indoor": {
+        "name": "PM 10 intérieur"
+      },
+      "pm2p5_value_indoor": {
+        "name": "PM 2,5 intérieur"
+      },
+      "power": {
+        "name": "Puissance"
+      },
+      "pr_code": {
+        "name": "Code du programme"
+      },
+      "pr_time": {
+        "name": "Durée du programme"
+      },
+      "pre_filter_status": {
+        "name": "Pré-filtre"
+      },
+      "remaining_time_m_m": {
+        "name": "Temps restant"
+      },
+      "spin_speed": {
+        "name": "Vitesse d'essorage"
+      },
+      "total_wash_cycle": {
+        "name": "Cycles de lavage"
+      },
+      "total_water_used": {
+        "name": "Eau totale utilisée"
+      },
+      "total_work_time": {
+        "name": "Temps de travail total"
+      },
+      "voc_value_indoor": {
+        "name": "COV intérieur"
+      },
+      "volume": {
+        "name": "Volume"
+      },
+      "water_hardness": {
+        "name": "Dureté de l'eau"
+      },
+      "start_time": {
+        "name": "Heure de début"
+      },
+      "end_time": {
+        "name": "Heure de fin"
+      },
+      "mean_water_consumption": {
+        "name": "Consommation d'eau moyenne"
+      },
+      "program_name": {
+        "name": "Nom du programme"
+      },
+      "statistics_programs_counter": {
+        "name": "Programmes au total"
+      },
+      "current_wash_cycle": {
+        "name": "Cycle de lavage en cours"
+      },
+      "current_water_used": {
+        "name": "Eau utilisée en cours"
+      },
+      "current_electricity_used": {
+        "name": "Électricité utilisée en cours"
+      },
+      "total_electricity_used": {
+        "name": "Électricité totale utilisée"
+      },
+      "weight": {
+        "name": "Poids estimé"
+      },
+      "errors": {
+        "name": "Erreur"
+      },
+      "temp": {
+        "name": "Température"
+      },
+      "temp_env": {
+        "name": "Température ambiante"
+      },
+      "temp_indoor": {
+        "name": "Température intérieure"
+      },
+      "temp_outdoor": {
+        "name": "Température extérieure"
+      },
+      "temp_sel": {
+        "name": "Température sélectionnée"
+      },
+      "temp_sel_z1": {
+        "name": "Température sélectionnée zone 1"
+      },
+      "temp_sel_z2": {
+        "name": "Température sélectionnée zone 2"
+      },
+      "temp_sel_z3": {
+        "name": "Température sélectionnée zone 3"
+      },
+      "temp_z1": {
+        "name": "Température zone 1"
+      },
+      "temp_z2": {
+        "name": "Température zone 2"
+      },
+      "temp_z3": {
+        "name": "Température zone 3"
+      },
+      "temp_dhw": {
+        "name": "Température eau chaude sanitaire"
+      },
+      "temp_sel_dhw": {
+        "name": "Température ECS sélectionnée"
+      },
+      "humidity": {
+        "name": "Humidité"
+      },
+      "humidity_z1": {
+        "name": "Humidité zone 1"
+      },
+      "humidity_z2": {
+        "name": "Humidité zone 2"
+      },
+      "humidity_indoor": {
+        "name": "Humidité intérieure"
+      },
+      "humidity_outdoor": {
+        "name": "Humidité extérieure"
+      },
+      "humidity_env": {
+        "name": "Humidité ambiante"
+      },
+      "quick_mode_z1": {
+        "name": "Mode rapide zone 1"
+      },
+      "quick_mode_z2": {
+        "name": "Mode rapide zone 2"
+      },
+      "intelligence_mode": {
+        "name": "Mode intelligent"
+      },
+      "sterilization_status": {
+        "name": "État de stérilisation"
+      },
+      "remaining_rinse_iterations": {
+        "name": "Rinçages restants"
+      },
+      "remaining_volume_hot_water": {
+        "name": "Eau chaude restante"
+      },
+      "haier_detergent_weight": {
+        "name": "Poids de lessive"
+      },
+      "haier_softener_weight": {
+        "name": "Poids d'adoucissant"
+      },
+      "pr_phase": {
+        "name": "Phase du programme"
+      },
+      "mach_mode": {
+        "name": "Mode"
       }
     },
     "binary_sensor": {
       "lockstatus": {
         "name": "Verrouillage enfant"
+      },
+      "on_off_status": {
+        "name": "État"
+      },
+      "door_status": {
+        "name": "État de la porte"
+      },
+      "door_status_z1": {
+        "name": "État de la porte zone 1"
+      },
+      "door_status_z2": {
+        "name": "État de la porte zone 2"
+      },
+      "door2_status_z1": {
+        "name": "État de la porte 2 zone 1"
+      },
+      "door2_status_z2": {
+        "name": "État de la porte 2 zone 2"
+      },
+      "door_lock_status": {
+        "name": "Verrouillage de la porte"
+      },
+      "light_status": {
+        "name": "Éclairage"
+      },
+      "remote_ctr_valid": {
+        "name": "Télécommande"
+      },
+      "preheat_status": {
+        "name": "Préchauffage"
+      },
+      "health_mode": {
+        "name": "Mode santé"
+      },
+      "mute_status": {
+        "name": "Mode silencieux"
+      },
+      "pause": {
+        "name": "En pause"
+      },
+      "defrost_status": {
+        "name": "Dégivrage"
+      },
+      "salt_status": {
+        "name": "Sel"
+      },
+      "rinse_aid_status": {
+        "name": "Liquide de rinçage"
+      },
+      "heating_status": {
+        "name": "Chauffage"
+      },
+      "anode_maintenance_status": {
+        "name": "Maintenance anode"
+      },
+      "tank_maintenance_status": {
+        "name": "Maintenance cuve"
+      },
+      "night_wash_status": {
+        "name": "Lavage de nuit"
+      },
+      "steam_status": {
+        "name": "Vapeur"
+      },
+      "energy_saving_status": {
+        "name": "Économie d'énergie"
+      },
+      "extra_dry": {
+        "name": "Séchage extra"
+      },
+      "half_load": {
+        "name": "Demi-charge"
+      },
+      "open_door": {
+        "name": "Porte ouverte en fin"
+      },
+      "eco_express": {
+        "name": "Éco express"
+      }
+    },
+    "switch": {
+      "sleep_mode": {
+        "name": "Mode veille"
+      },
+      "screen_display_status": {
+        "name": "Affichage de l'écran"
+      },
+      "silent_mode": {
+        "name": "Mode silencieux"
+      },
+      "echo_status": {
+        "name": "Écho"
+      },
+      "rapid_mode": {
+        "name": "Mode rapide"
+      },
+      "10_degree_heating": {
+        "name": "Chauffage 10°"
+      },
+      "eco_mode": {
+        "name": "Mode éco"
+      },
+      "turbo_mode": {
+        "name": "Mode turbo"
+      },
+      "health_mode": {
+        "name": "Mode santé"
+      }
+    },
+    "button": {
+      "start_button": {
+        "name": "Obtenir les détails des programmes"
+      },
+      "settings_button": {
+        "name": "Obtenir les détails des réglages"
       }
     }
   },

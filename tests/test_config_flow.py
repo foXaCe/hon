@@ -297,21 +297,14 @@ async def test_reconfigure_cannot_connect(hass) -> None:
 
 
 async def test_async_get_options_flow(hass) -> None:
-    """async_get_options_flow returns an options flow handler.
-
-    NOTE: ``HonOptionsFlowHandler.__init__`` assigns ``self.config_entry``, a
-    read-only property in HA >= 2026.7 — a real source bug (reported, not
-    fixed). The constructor is patched to a no-op here so the method itself
-    can still be verified.
-    """
+    """async_get_options_flow returns an options flow handler."""
     entry = _mock_entry()
-    with patch.object(HonOptionsFlowHandler, "__init__", lambda self, _entry: None):
-        flow = HonFlowHandler().async_get_options_flow(entry)
+    flow = HonFlowHandler().async_get_options_flow(entry)
     assert isinstance(flow, HonOptionsFlowHandler)
 
 
 def _make_options_handler(hass, entry) -> HonOptionsFlowHandler:
-    """Build an options handler bypassing the broken __init__ (source bug)."""
+    """Build an options handler linked to the config entry."""
     handler = object.__new__(HonOptionsFlowHandler)
     handler.hass = hass
     handler.handler = entry.entry_id
@@ -334,6 +327,21 @@ async def test_options_flow_init_creates_entry(hass) -> None:
     entry.add_to_hass(hass)
     handler = _make_options_handler(hass, entry)
     result = await handler.async_step_init({CONF_UPDATE_INTERVAL: 120})
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"] == {CONF_UPDATE_INTERVAL: 120}
+
+
+async def test_options_flow_via_framework(hass) -> None:
+    """The options flow can be started through the framework (no 500)."""
+    entry = _mock_entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_UPDATE_INTERVAL: 120}
+    )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {CONF_UPDATE_INTERVAL: 120}
 

@@ -23,6 +23,7 @@ from homeassistant.const import (
 )
 
 from ..const import APPLIANCE_TYPE
+from ..helpers import snake_case
 from .base import HonBaseSensorEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -333,6 +334,7 @@ class HonBaseStart(HonBaseSensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, appliance, "", "Start time")
+        self._attr_translation_key = "start_time"
 
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
         self._attr_icon = "mdi:clock-start"
@@ -372,6 +374,7 @@ class HonBaseEnd(HonBaseSensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, appliance, "", "End time")
+        self._attr_translation_key = "end_time"
 
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
         self._attr_icon = "mdi:clock-end"
@@ -412,6 +415,7 @@ class HonBaseMeanWaterConsumption(HonBaseSensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, appliance, "", "Mean water consumption")
+        self._attr_translation_key = "mean_water_consumption"
 
         self._attr_native_unit_of_measurement = UnitOfVolume.LITERS
         self._attr_device_class = SensorDeviceClass.WATER
@@ -605,6 +609,7 @@ class HonBaseProgramsCounter(HonBaseSensorEntity):
         super().__init__(
             coordinator, appliance, "statistics.programsCounter", "Total programs"
         )
+        self._attr_translation_key = "statistics_programs_counter"
 
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
         self._attr_icon = "mdi:counter"
@@ -652,6 +657,7 @@ class HonBaseDetergentWeight(HonBaseSensorEntity):
     def __init__(self, hass, coordinator, entry, appliance, key, name) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, appliance, key, name)
+        self._attr_translation_key = snake_case(key).replace("__", "_")
 
         self._attr_native_unit_of_measurement = UnitOfMass.GRAMS
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -667,6 +673,7 @@ class HonBaseWaterHardness(HonBaseSensorEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, appliance, "waterHard", "Water hardness")
+        self._attr_translation_key = "water_hardness"
 
         self._attr_icon = "mdi:water-opacity"
 
