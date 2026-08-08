@@ -1,7 +1,9 @@
-#All credits to https://github.com/Andre0512/pyhOn
+# All credits to https://github.com/Andre0512/pyhOn
 
 import logging
+
 _LOGGER = logging.getLogger(__name__)
+
 
 class HonParameter:
     def __init__(self, key, attributes):
@@ -47,7 +49,9 @@ class HonParameterFixed(HonParameter):
     @value.setter
     def value(self, value):
         if not value == self._value:
-            raise ValueError(f"Can't change fixed value for parameter: {self.key}. Fixed value: {self._value}. New value {value}.")
+            raise ValueError(
+                f"Can't change fixed value for parameter: {self.key}. Fixed value: {self._value}. New value {value}."
+            )
 
 
 class HonParameterRange(HonParameter):
@@ -59,12 +63,14 @@ class HonParameterRange(HonParameter):
             self._step = int(attributes["incrementValue"])
             self._default = int(attributes.get("defaultValue", self._min))
         except (TypeError, ValueError):
-            self._min = float(attributes["minimumValue"].replace(",","."))
-            self._max = float(attributes["maximumValue"].replace(",","."))
-            self._step = float(attributes["incrementValue"].replace(",","."))
-            self._default = float(attributes.get("defaultValue", self._min).replace(",","."))
+            self._min = float(attributes["minimumValue"].replace(",", "."))
+            self._max = float(attributes["maximumValue"].replace(",", "."))
+            self._step = float(attributes["incrementValue"].replace(",", "."))
+            self._default = float(
+                attributes.get("defaultValue", self._min).replace(",", ".")
+            )
         self._value = self._default
-        #_LOGGER.error(f"Param {key} min {self._min} | max {self._max} | step {self._step} | default {self._default}")
+        # _LOGGER.error(f"Param {key} min {self._min} | max {self._max} | step {self._step} | default {self._default}")
 
     def __repr__(self):
         return f"{self.__class__} (<{self.key}> [{self._min} - {self._max}])"
@@ -95,14 +101,16 @@ class HonParameterRange(HonParameter):
     @value.setter
     def value(self, value):
         if type(value) == str and type(self._step) == float:
-            value = float(value.replace(",","."))
+            value = float(value.replace(",", "."))
         elif type(value) == str:
-            value = int(float(value.replace(",",".")))
+            value = int(float(value.replace(",", ".")))
 
         if self._min <= value <= self._max and not value % self._step:
             self._value = value
         else:
-            raise ValueError(f"Key [{self.key}] Value [{value}] - Allowed: min {self._min} max {self._max} step {self._step}")
+            raise ValueError(
+                f"Key [{self.key}] Value [{value}] - Allowed: min {self._min} max {self._max} step {self._step}"
+            )
 
 
 class HonParameterEnum(HonParameter):
@@ -114,7 +122,7 @@ class HonParameterEnum(HonParameter):
 
     def __repr__(self):
         return f"{self.__class__} (<{self.key}> {self.values})"
-        
+
     def dump(self):
         return f"{self.key}: {self.valuesBase} - Default: {self._default}"
 
@@ -139,7 +147,9 @@ class HonParameterEnum(HonParameter):
         if value in self.values:
             self._value = value
         else:
-            raise ValueError(f"ParameterEnum [{self.key}] Invalid value: {value} Allowed values: {self.values}")
+            raise ValueError(
+                f"ParameterEnum [{self.key}] Invalid value: {value} Allowed values: {self.values}"
+            )
 
 
 class HonParameterProgram(HonParameterEnum):

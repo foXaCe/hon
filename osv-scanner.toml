@@ -1,0 +1,53 @@
+# CVEs dans les dépendances de dev/test (pytest-homeassistant-custom-component → homeassistant).
+# Home Assistant 2026.8.1 épingle cryptography==48.0.1 et dépendances exactes —
+# la correction upstream (cryptography 49.x) n'est pas encore disponible dans HA.
+# Ces packages ne sont PAS embarqués dans l'intégration (runtime = python-dateutil uniquement).
+# Re-évaluer à chaque montée de version de HA / de la stack de test.
+
+[[IgnoredVulns]]
+id = "GHSA-5239-wwwm-4pmq"
+
+[[IgnoredVulns]]
+id = "GHSA-65pc-fj4g-8rjx"
+
+[[IgnoredVulns]]
+id = "GHSA-g6cj-pr64-35w5"
+
+[[IgnoredVulns]]
+id = "GHSA-jwv3-5hgf-82ww"
+
+[[IgnoredVulns]]
+id = "GHSA-m2h6-j472-rp4c"
+
+[[IgnoredVulns]]
+id = "GHSA-mrwq-x4v8-fh7p"
+
+[[IgnoredVulns]]
+id = "GHSA-qmgc-5h2g-mvrw"
+
+[[IgnoredVulns]]
+id = "GHSA-w853-jp5j-5j7f"
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-117"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1374"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1375"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-215"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2987"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-3552"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-3553"
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-3554"

@@ -1,20 +1,22 @@
 import logging
-from datetime import timedelta
-from typing import Optional
-from datetime import datetime
-
-from homeassistant.core import callback
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, STATE_OFF, UnitOfTemperature, PRECISION_WHOLE
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from datetime import datetime, timedelta
 
 from homeassistant.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    PRECISION_WHOLE,
+    STATE_OFF,
+    UnitOfTemperature,
+)
+from homeassistant.core import callback
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, APPLIANCE_TYPE
+from .const import APPLIANCE_TYPE, DOMAIN
 from .parameter import HonParameterRange
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,17 +49,19 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
 class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
     def __init__(self, hass, coordinator, entry, appliance) -> None:
         super().__init__(coordinator)
-        self._coordinator   = coordinator
-        self._hass          = hass
-        self._brand         = appliance["brand"]
-        self._mac           = appliance["macAddress"]
-        self._name          = appliance.get("nickName", appliance.get("modelName", "Water Heater"))
-        self._model         = appliance["modelName"]
-        self._type_name     = appliance["applianceTypeName"]
-        self._fw_version    = appliance["fwVersion"]
-        self._unique_id     = f"{self._mac}_water_heater"
-        self._device        = coordinator.device
-        self._watcher       = None
+        self._coordinator = coordinator
+        self._hass = hass
+        self._brand = appliance["brand"]
+        self._mac = appliance["macAddress"]
+        self._name = appliance.get(
+            "nickName", appliance.get("modelName", "Water Heater")
+        )
+        self._model = appliance["modelName"]
+        self._type_name = appliance["applianceTypeName"]
+        self._fw_version = appliance["fwVersion"]
+        self._unique_id = f"{self._mac}_water_heater"
+        self._device = coordinator.device
+        self._watcher = None
 
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_operation_list = [STATE_OFF, *WH_MODES.keys()]
@@ -96,7 +100,7 @@ class HonWaterHeaterEntity(CoordinatorEntity, WaterHeaterEntity):
             self._hass, self._clear_watcher, delay
         )
 
-    async def _clear_watcher(self, now: Optional[datetime] = None) -> None:
+    async def _clear_watcher(self, now: datetime | None = None) -> None:
         if self._watcher is not None:
             self._watcher()
         self._watcher = None

@@ -1,0 +1,67 @@
+[project]
+name = "hon"
+version = "0.8.4"
+requires-python = ">=3.12"
+description = "Support of all Haier, Candy, Hoover appliances integrated in the official hOn mobile app."
+license = "MIT"
+authors = [{ name = "foXaCe" }]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "C4",
+    "SIM",
+    "ASYNC",
+    "TCH",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Legacy upstream code patterns (hOn API camelCase naming, version-gated imports,
+# long lines). Fixable via ha-integration-overhaul — not bootstrap scope.
+"custom_components/hon/*" = [
+    "E501",   # long lines mirroring API payloads
+    "E402",   # version-gated module imports (hon.py)
+    "E711", "E712", "E721", "E722",  # comparison idioms
+    "N801", "N802", "N803", "N806",  # camelCase matching hOn API field names
+    "B006",   # mutable defaults (device.py)
+    "C419",   # unnecessary list comprehension (device.py)
+    "SIM102", "SIM118", "SIM201",    # simplification patterns
+    "F401", "F841",                  # imports/vars used in commented code
+]
+"tests/*" = ["D"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_unused_ignores = true
+exclude = ["tests"]
+
+[[tool.mypy.overrides]]
+module = "hon.*"
+# Legacy upstream code without annotations — typing overhaul via
+# ha-integration-overhaul. Keep useful checks, skip strict annotation
+# enforcement so the bootstrap stays green.
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+follow_imports = "skip"
+disable_error_code = [
+    "list-item", "union-attr", "assignment", "var-annotated",
+    "attr-defined", "arg-type", "return-value", "no-any-return",
+    "untyped-decorator", "call-arg",
+    "misc", "index", "import-untyped",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

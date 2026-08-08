@@ -1,8 +1,15 @@
-#All credits to https://github.com/Andre0512/pyhOn
-from .parameter import HonParameterFixed, HonParameterEnum, HonParameterRange, HonParameterProgram
-
+# All credits to https://github.com/Andre0512/pyhOn
 import logging
+
+from .parameter import (
+    HonParameterEnum,
+    HonParameterFixed,
+    HonParameterProgram,
+    HonParameterRange,
+)
+
 _LOGGER = logging.getLogger(__name__)
+
 
 class HonCommand:
     def __init__(self, name, attributes, connector, device, multi=None, program=""):
@@ -13,7 +20,9 @@ class HonCommand:
         self._program = program
         self._description = attributes.get("description", "")
         self._parameters = self._create_parameters(attributes.get("parameters", {}))
-        self._ancillary_parameters = self._create_parameters(attributes.get("ancillaryParameters", {}))
+        self._ancillary_parameters = self._create_parameters(
+            attributes.get("ancillaryParameters", {})
+        )
 
     def __repr__(self):
         return f"{self._name} command"
@@ -38,11 +47,18 @@ class HonCommand:
 
     @property
     def ancillary_parameters(self):
-        return {key: parameter.value for key, parameter in self._ancillary_parameters.items()}
+        return {
+            key: parameter.value
+            for key, parameter in self._ancillary_parameters.items()
+        }
 
     async def send(self):
-        parameters = {name: parameter.value for name, parameter in self._parameters.items()}
-        return await self._connector.send_command(self._device, self._name, parameters, self.ancillary_parameters)
+        parameters = {
+            name: parameter.value for name, parameter in self._parameters.items()
+        }
+        return await self._connector.send_command(
+            self._device, self._name, parameters, self.ancillary_parameters
+        )
 
     def get_programs(self):
         return self._multi
@@ -50,7 +66,7 @@ class HonCommand:
     def set_program(self, program):
         self._multi[program]._multi = self._multi
         self._device.commands[self._name] = self._multi[program]
-    
+
     def _get_settings_keys(self, command=None):
         command = command or self
         keys = []
@@ -65,7 +81,9 @@ class HonCommand:
     def setting_keys(self):
         if not self._multi:
             return self._get_settings_keys()
-        result = [key for cmd in self._multi.values() for key in self._get_settings_keys(cmd)]
+        result = [
+            key for cmd in self._multi.values() for key in self._get_settings_keys(cmd)
+        ]
         return list(set(result + ["program"]))
 
     @property
@@ -98,6 +116,6 @@ class HonCommand:
                 continue
             text += f"""{parameter.dump()}
 """
-            example += f"\'{key}\':{parameter.default},"
+            example += f"'{key}':{parameter.default},"
         example = example[:-1] + "}"
         return text, example

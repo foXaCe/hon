@@ -1,23 +1,22 @@
-import logging
-import voluptuous as vol
 import ast
-
+import logging
 from datetime import datetime
+
+import voluptuous as vol
 from dateutil.tz import gettz
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_DEVICE_ID, CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, ServiceCall
 
-from homeassistant.helpers import entity_registry as er
+# from homeassistant.helpers.template import device_id as get_device_id
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
-#from homeassistant.helpers.template import device_id as get_device_id
-from homeassistant.exceptions import HomeAssistantError, ConfigEntryNotReady
+from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN, PLATFORMS
-from .hon import HonConnection, get_hOn_mac
 from .device import HonDevice
-
+from .hon import HonConnection, get_hOn_mac
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_REGISTRY = "service_registry"
@@ -35,19 +34,21 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-#TODO merge all programes names in language file
+# TODO merge all programes names in language file
+
 
 # This method will update a sensor value with the targetted one for a better user experience
 def update_sensor(hass, device_id, mac, sensor_name, state):
 
-    entity_reg  = er.async_get(hass)
-    entries     = er.async_entries_for_device(entity_reg, device_id)
+    entity_reg = er.async_get(hass)
+    entries = er.async_entries_for_device(entity_reg, device_id)
 
     # Loop over all entries and update the good one
     for entry in entries:
-        if( entry.unique_id == mac + '_' + sensor_name):
+        if entry.unique_id == mac + "_" + sensor_name:
             inputStateObject = hass.states.get(entry.entity_id)
             hass.states.async_set(entry.entity_id, state, inputStateObject.attributes)
+
 
 def get_parameters(call):
     parameters_str = call.data.get("parameters", "{}")
@@ -60,12 +61,14 @@ def _minutes_until(target: datetime, now: datetime) -> int:
     """Return the number of whole minutes until the target time."""
     return max(0, int((target - now).total_seconds() / 60))
 
-#def get_device_ids(hass, call):
+
+# def get_device_ids(hass, call):
 #    device_ids = call.data.get("device_id", [])
-    #entity_ids = call.data.get("entity_id", [])
-    #for entity_id in entity_ids:
-        #device_ids.append(get_device_id(hass, entity_id))
-    #return list(dict.fromkeys(device_ids))
+# entity_ids = call.data.get("entity_id", [])
+# for entity_id in entity_ids:
+# device_ids.append(get_device_id(hass, entity_id))
+# return list(dict.fromkeys(device_ids))
+
 
 def get_device_ids(hass, call):
     device_ids = set(call.data.get("device_id", []))
@@ -93,7 +96,7 @@ async def async_get_device_ids(hass, call):
             device_ids.add(entry.device_id)
 
     return list(device_ids)
-    
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hon = HonConnection(hass, entry)
@@ -112,7 +115,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.data[DOMAIN].setdefault(SERVICE_REGISTRY, set())
 
     for appliance in hon.appliances:
-        
         coordinator = await hon.async_get_coordinator(appliance)
         coordinator.device = HonDevice(hon, coordinator, appliance)
         await coordinator.async_config_entry_first_refresh()
@@ -122,18 +124,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-
     async def handle_oven_start(call):
 
         delay_time = 0
         tz = gettz(hass.config.time_zone)
 
         if "start" in call.data:
-            date = datetime.strptime(call.data.get("start"), "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+            date = datetime.strptime(
+                call.data.get("start"), "%Y-%m-%d %H:%M:%S"
+            ).replace(tzinfo=tz)
             delay_time = _minutes_until(date, datetime.now(tz))
 
         if "end" in call.data and "duration" in call.data:
-            date = datetime.strptime(call.data.get("end"), "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+            date = datetime.strptime(call.data.get("end"), "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=tz
+            )
             duration = call.data.get("duration")
             delay_time = max(0, _minutes_until(date, datetime.now(tz)) - duration)
 
@@ -153,18 +158,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         return await hon.async_set(mac, "OV", parameters)
 
-    
     async def handle_dishwasher_start(call):
 
         delay_time = 0
         tz = gettz(hass.config.time_zone)
 
         if "start" in call.data:
-            date = datetime.strptime(call.data.get("start"), "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+            date = datetime.strptime(
+                call.data.get("start"), "%Y-%m-%d %H:%M:%S"
+            ).replace(tzinfo=tz)
             delay_time = _minutes_until(date, datetime.now(tz))
 
         if "end" in call.data and "duration" in call.data:
-            date = datetime.strptime(call.data.get("end"), "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+            date = datetime.strptime(call.data.get("end"), "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=tz
+            )
             duration = call.data.get("duration")
             delay_time = max(0, _minutes_until(date, datetime.now(tz)) - duration)
 
@@ -174,75 +182,77 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             "prCode": call.data.get("program"),
             "prPosition": "1",
             "prTime": call.data.get("duration", "0"),
- #           "extraDry": "1" if call.data.get("extra_dry", False) else "0",
- #           "openDoor": "1" if call.data.get("open_door", False) else "0", ##conditional program
- #           "halfLoad": "1" if call.data.get("half_load", False) else "0", ##conditional programm
- #           "prStrDisp": call.data.get("string_display"),
+            #           "extraDry": "1" if call.data.get("extra_dry", False) else "0",
+            #           "openDoor": "1" if call.data.get("open_door", False) else "0", ##conditional program
+            #           "halfLoad": "1" if call.data.get("half_load", False) else "0", ##conditional programm
+            #           "prStrDisp": call.data.get("string_display"),
         }
 
         mac = get_hOn_mac(call.data.get("device"), hass)
 
         return await hon.async_set(mac, "DW", parameters)
-    
+
     async def handle_washingmachine_start(call):
 
         delay_time = 0
         tz = gettz(hass.config.time_zone)
         if "end" in call.data:
-            date = datetime.strptime(call.data.get("end"), "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+            date = datetime.strptime(call.data.get("end"), "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=tz
+            )
             delay_time = _minutes_until(date, datetime.now(tz))
 
         parameters = {
-                    "haier_MainWashSpeed": "50",
-                    "creaseResistSoakStatus": "0",
-                    "haier_SoakPrewashSelection": "0",
-                    "prCode": "999",
-                    "soakWashStatus": "0",
-                    "strongStatus": "0",
-                    "energySavingStatus": "0",
-                    "spinSpeed": call.data.get("spinSpeed", "400"),
-                    "haier_MainWashWaterLevel": "2",
-                    "rinseIterationTime": "8",
-                    "haier_SoakPrewashSpeed": "0",
-                    "permanentPressStatus": "1",
-                    "nightWashStatus": "0",
-                    "intelligenceStatus": "0",
-                    "haier_SoakPrewashStopTime": "0",
-                    "weight": "5",
-                    "highWaterLevelStatus": "0",
-                    "voiceStatus": "0",
-                    "haier_SoakPrewashTime": "0",
-                    "autoDisinfectantStatus": "0",
-                    "cloudProgSrc": "2",
-                    "haier_SoakPrewashRotateTime": "0",
-                    "cloudProgId": "255",
-                    "haier_SoakPrewashTemperature": "0",
-                    "dryProgFlag": "0",
-                    "dryLevel": "0",
-                    "haier_RinseRotateTime": "20",
-                    "uvSterilizationStatus": "0",
-                    "dryTime": "0",
-                    "delayStatus": "0",
-                    "dryLevelAllowed": "0",
-                    "rinseIterations": call.data.get("rinseIterations", "2"),
-                    "lockStatus": "0",
-                    "mainWashTime": call.data.get("mainWashTime", "15"),
-                    "autoSoftenerStatus": call.data.get("autoSoftenerStatus", "0"),
-                    "washerDryIntensity": "1",
-                    "autoDetergentStatus": "0",
-                    "antiAllergyStatus": "0",
-                    "speedUpStatus": "0",
-                    "temp": call.data.get("temp", "30"),
-                    "haier_MainWashRotateTime": "20",
-                    "detergentBStatus": "0",
-                    "haier_MainWashStopTime": "5",
-                    "texture": "1",
-                    "operationName": "grOnlineWash",
-                    "haier_RinseSpeed": "50",
-                    "haier_ConstantTempStatus": "1",
-                    "haier_RinseStopTime": "5",
-                    "delayTime": delay_time
-                }
+            "haier_MainWashSpeed": "50",
+            "creaseResistSoakStatus": "0",
+            "haier_SoakPrewashSelection": "0",
+            "prCode": "999",
+            "soakWashStatus": "0",
+            "strongStatus": "0",
+            "energySavingStatus": "0",
+            "spinSpeed": call.data.get("spinSpeed", "400"),
+            "haier_MainWashWaterLevel": "2",
+            "rinseIterationTime": "8",
+            "haier_SoakPrewashSpeed": "0",
+            "permanentPressStatus": "1",
+            "nightWashStatus": "0",
+            "intelligenceStatus": "0",
+            "haier_SoakPrewashStopTime": "0",
+            "weight": "5",
+            "highWaterLevelStatus": "0",
+            "voiceStatus": "0",
+            "haier_SoakPrewashTime": "0",
+            "autoDisinfectantStatus": "0",
+            "cloudProgSrc": "2",
+            "haier_SoakPrewashRotateTime": "0",
+            "cloudProgId": "255",
+            "haier_SoakPrewashTemperature": "0",
+            "dryProgFlag": "0",
+            "dryLevel": "0",
+            "haier_RinseRotateTime": "20",
+            "uvSterilizationStatus": "0",
+            "dryTime": "0",
+            "delayStatus": "0",
+            "dryLevelAllowed": "0",
+            "rinseIterations": call.data.get("rinseIterations", "2"),
+            "lockStatus": "0",
+            "mainWashTime": call.data.get("mainWashTime", "15"),
+            "autoSoftenerStatus": call.data.get("autoSoftenerStatus", "0"),
+            "washerDryIntensity": "1",
+            "autoDetergentStatus": "0",
+            "antiAllergyStatus": "0",
+            "speedUpStatus": "0",
+            "temp": call.data.get("temp", "30"),
+            "haier_MainWashRotateTime": "20",
+            "detergentBStatus": "0",
+            "haier_MainWashStopTime": "5",
+            "texture": "1",
+            "operationName": "grOnlineWash",
+            "haier_RinseSpeed": "50",
+            "haier_ConstantTempStatus": "1",
+            "haier_RinseStopTime": "5",
+            "delayTime": delay_time,
+        }
 
         mac = get_hOn_mac(call.data.get("device"), hass)
 
@@ -251,7 +261,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         if json["category"] != "DISCONNECTED":
             return await hon.async_set(mac, "WM", parameters)
         _LOGGER.error(f"This hOn device is disconnected - Mac address [{mac}]")
-
 
     async def handle_purifier_start(call):
 
@@ -266,7 +275,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     async def handle_purifier_maxmode(call):
 
-        parameters = { "machMode": "4" }
+        parameters = {"machMode": "4"}
 
         mac = get_hOn_mac(call.data.get("device"), hass)
 
@@ -274,22 +283,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     async def handle_purifier_automode(call):
 
-        parameters = { "machMode": "2" }
+        parameters = {"machMode": "2"}
 
         mac = get_hOn_mac(call.data.get("device"), hass)
 
         return await hon.async_set(mac, "AP", parameters)
 
     async def handle_purifier_sleepmode(call):
-        parameters = { "machMode": "1" }
+        parameters = {"machMode": "1"}
         mac = get_hOn_mac(call.data.get("device"), hass)
         return await hon.async_set(mac, "AP", parameters)
 
-
     # Generic method to set a mode to any hOn device
     async def handle_set_mode(call):
-        #parameters = {"onOffStatus": "1", "machMode": call.data.get("mode", 1)}
-        #return await hon.async_set_parameter(call.data.get("device_id")[0], parameters)
+        # parameters = {"onOffStatus": "1", "machMode": call.data.get("mode", 1)}
+        # return await hon.async_set_parameter(call.data.get("device_id")[0], parameters)
         device_id = call.data.get("device")
         mac = get_hOn_mac(device_id, hass)
         coordinator = await hon.async_get_existing_coordinator(mac)
@@ -301,9 +309,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     async def handle_turn_off(call):
         device_id = call.data.get("device")
         mac = get_hOn_mac(device_id, hass)
-        
+
         coordinator = await hon.async_get_existing_coordinator(mac)
-        parameters = {"onOffStatus": "0", "machMode": "1" }
+        parameters = {"onOffStatus": "0", "machMode": "1"}
         await coordinator.async_set(parameters)
         await coordinator.async_request_refresh()
 
@@ -311,97 +319,93 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         device_id = call.data.get("device")
         mac = get_hOn_mac(device_id, hass)
 
-        update_sensor(hass, device_id, mac, "light_status" , "on")
+        update_sensor(hass, device_id, mac, "light_status", "on")
         coordinator = await hon.async_get_existing_coordinator(mac)
         await coordinator.async_set({"lightStatus": "1"})
         await coordinator.async_request_refresh()
 
+        # entity_registry = er.async_get(hass)
+        # entries         = er.async_entries_for_device(entity_registry, device_id)
 
-        #entity_registry = er.async_get(hass)
-        #entries         = er.async_entries_for_device(entity_registry, device_id)
-
-        #for entry in entries:
+        # for entry in entries:
         #    _LOGGER.warning(entry.entity_id)
         #    parameters  = {"lightStatus": "1"}
         #    await entity.async_set(parameters)
         #    break
         #
-        #device_registry = dr.async_get(hass)
-        #device = device_registry.async_get(device_id)
-        #identifiers = next(iter(device.identifiers))
+        # device_registry = dr.async_get(hass)
+        # device = device_registry.async_get(device_id)
+        # identifiers = next(iter(device.identifiers))
         #
 
-        #mac         = identifiers[1]
-        #type_name   = identifiers[2]
+        # mac         = identifiers[1]
+        # type_name   = identifiers[2]
 
-        #parameters  = {"lightStatus": "1"}
-        #await hon.async_set(mac, type_name, parameters)
+        # parameters  = {"lightStatus": "1"}
+        # await hon.async_set(mac, type_name, parameters)
 
-        #update_sensor(hass, device_id, mac, "light_status" , "on")
+        # update_sensor(hass, device_id, mac, "light_status" , "on")
 
-        #return await hon.async_set_parameter(call.data.get("device_id")[0], parameters)
+        # return await hon.async_set_parameter(call.data.get("device_id")[0], parameters)
 
     async def handle_light_off(call):
         device_id = call.data.get("device")
         mac = get_hOn_mac(device_id, hass)
-        update_sensor(hass, device_id, mac, "light_status" , "off")
+        update_sensor(hass, device_id, mac, "light_status", "off")
 
         coordinator = await hon.async_get_existing_coordinator(mac)
         await coordinator.async_set({"lightStatus": "0"})
         await coordinator.async_request_refresh()
 
-
-
     async def handle_health_mode_on(call):
         device_id = call.data.get("device")
         mac = get_hOn_mac(device_id, hass)
-        update_sensor(hass, device_id, mac, "health_mode" , "on")
+        update_sensor(hass, device_id, mac, "health_mode", "on")
 
         coordinator = await hon.async_get_existing_coordinator(mac)
         await coordinator.async_set({"healthMode": "1"})
         await coordinator.async_request_refresh()
 
-
     async def handle_health_mode_off(call):
         device_id = call.data.get("device")
         mac = get_hOn_mac(device_id, hass)
-        update_sensor(hass, device_id, mac, "health_mode" , "off")
+        update_sensor(hass, device_id, mac, "health_mode", "off")
 
         coordinator = await hon.async_get_existing_coordinator(mac)
         await coordinator.async_set({"healthMode": "0"})
         await coordinator.async_request_refresh()
-    
 
     async def handle_start_program(call):
-        #device_ids = call.data.get("device_id", [])
-        #entity_ids = call.data.get("entity_id", [])
-        #for entity_id in entity_ids:
+        # device_ids = call.data.get("device_id", [])
+        # entity_ids = call.data.get("entity_id", [])
+        # for entity_id in entity_ids:
         #    device_ids.append(get_device_id(hass, entity_id))
-        #device_ids = list(dict.fromkeys(device_ids))
+        # device_ids = list(dict.fromkeys(device_ids))
 
         device_ids = get_device_ids(hass, call)
-        
+
         for device_id in device_ids:
-            #mac = get_hOn_mac(device_id, hass)
-            #coordinator = await hon.async_get_existing_coordinator(mac)
-            #device = coordinator.device
+            # mac = get_hOn_mac(device_id, hass)
+            # coordinator = await hon.async_get_existing_coordinator(mac)
+            # device = coordinator.device
 
-            device      = hon.get_device(hass, device_id)
-            command     = device.commands.get("startProgram")
-            programs    = command.get_programs()
-            program     = call.data.get("program")
-            if( program not in programs.keys()):
+            device = hon.get_device(hass, device_id)
+            command = device.commands.get("startProgram")
+            programs = command.get_programs()
+            program = call.data.get("program")
+            if program not in programs.keys():
                 keys = ", ".join(programs)
-                raise HomeAssistantError(f"Invalid [Program] value, allowed values [{keys}]")
+                raise HomeAssistantError(
+                    f"Invalid [Program] value, allowed values [{keys}]"
+                )
 
-            parameters  = get_parameters(call)
+            parameters = get_parameters(call)
             await device.start_command(program, parameters).send()
 
-
     async def handle_custom_request(call):
-        #device_id   = call.data.get("device")
-        #mac         = get_hOn_mac(device_id, hass)
-        #coordinator = await hon.async_get_existing_coordinator(mac)
+        # device_id   = call.data.get("device")
+        # mac         = get_hOn_mac(device_id, hass)
+        # coordinator = await hon.async_get_existing_coordinator(mac)
         device_ids = get_device_ids(hass, call)
         parameters = get_parameters(call)
         for device_id in device_ids:
@@ -409,23 +413,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             await device.coordinator.async_set(parameters)
             await device.coordinator.async_request_refresh()
 
-
     async def handle_update_settings(call):
-        #device_ids = call.data.get("device_id", [])
-        #entity_ids = call.data.get("entity_id", [])
-        #for entity_id in entity_ids:
+        # device_ids = call.data.get("device_id", [])
+        # entity_ids = call.data.get("entity_id", [])
+        # for entity_id in entity_ids:
         #    device_ids.append(get_device_id(hass, entity_id))
-        #device_ids = list(dict.fromkeys(device_ids))
+        # device_ids = list(dict.fromkeys(device_ids))
         device_ids = get_device_ids(hass, call)
         parameters = get_parameters(call)
 
         for device_id in device_ids:
-            #mac = get_hOn_mac(device_id, hass)
-            #coordinator = await hon.async_get_existing_coordinator(mac)
-            #device = coordinator.device
+            # mac = get_hOn_mac(device_id, hass)
+            # coordinator = await hon.async_get_existing_coordinator(mac)
+            # device = coordinator.device
             device = hon.get_device(hass, device_id)
             await device.settings_command(parameters).send()
-
 
     async def async_get_setting(call: ServiceCall):
         """Handle the get_setting service call."""
@@ -444,8 +446,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         # On émet un événement avec les résultats
         hass.bus.async_fire("hon_get_setting_result", {"results": results})
         return results
-
-
 
     services = {
         "turn_on_washingmachine": handle_washingmachine_start,

@@ -1,24 +1,81 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  release-zip:
+  release-please:
+    name: Open / maintain Release PR
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
     steps:
-      - uses: actions/checkout@v2
-
-      - name: ZIP Component Dir
-        run: |
-          cd ${{ github.workspace }}/custom_components/hon
-          zip -r hon_integration.zip ./
-      - name: Upload zip to release
-        uses: svenstaro/upload-release-action@v2
+      - uses: googleapis/release-please-action@v5
+        id: release
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ github.workspace }}/custom_components/hon/hon_integration.zip
-          asset_name: hon_integration.zip
-          tag: ${{ github.ref }}
-          overwrite: true
+          release-type: simple
+          package-name: hon
+          extra-files: |
+            custom_components/hon/manifest.json
+          changelog-types: |
+            [
+              {"type":"feat","section":"Added","hidden":false},
+              {"type":"fix","section":"Fixed","hidden":false},
+              {"type":"perf","section":"Changed","hidden":false},
+              {"type":"refactor","section":"Changed","hidden":false},
+              {"type":"docs","section":"Documentation","hidden":false},
+              {"type":"test","section":"Tests","hidden":true},
+              {"type":"build","section":"Build","hidden":true},
+              {"type":"ci","section":"CI","hidden":true},
+              {"type":"chore","section":"Miscellaneous","hidden":true},
+              {"type":"revert","section":"Reverted","hidden":false}
+            ]
+
+  publish-assets:
+    name: Build + upload zip
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: Verify manifest version
+        run: |
+          MV=$(jq -r .version custom_components/hon/manifest.json)
+          [ "$MV" = "${{ needs.release-please.outputs.version }}" ] \
+            || { echo "Manifest version $MV ≠ release ${{ needs.release-please.outputs.version }}"; exit 1; }
+
+      - name: Build zip
+        run: |
+          cd custom_components/hon
+          zip -r ../../hon.zip . -x "*.pyc" "__pycache__/*"
+          cd ../..
+          sha256sum hon.zip > hon.zip.sha256
+
+      - name: Upload assets to release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: |
+            hon.zip
+            hon.zip.sha256
+          fail_on_unmatched_files: true

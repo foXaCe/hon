@@ -1,15 +1,17 @@
 import logging
 import re
-from .device import HonDevice
-from .const import DOMAIN, APPLIANCE_DEFAULT_NAME
-from .parameter import HonParameterFixed, HonParameterEnum, HonParameterRange, HonParameterProgram
 
-from homeassistant.core import callback
-from homeassistant.const import UnitOfTemperature, UnitOfTime
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers import translation
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
+from homeassistant.const import UnitOfTemperature, UnitOfTime
+from homeassistant.core import callback
+from homeassistant.helpers import translation
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .const import APPLIANCE_DEFAULT_NAME, DOMAIN
+from .parameter import (
+    HonParameterRange,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,24 +55,28 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         coordinator = await hon.async_get_coordinator(appliance)
         device = coordinator.device
 
-        #command = device.settings_command()
+        # command = device.settings_command()
 
         for key in coordinator.device.settings:
             parameter = coordinator.device.settings[key]
-            if(isinstance(parameter, HonParameterRange)
-            and key.startswith("startProgram.")):
-
+            if isinstance(parameter, HonParameterRange) and key.startswith(
+                "startProgram."
+            ):
                 default_value = default_values.get(parameter.key, {})
-                translation_key = coordinator.device.appliance_type.lower() + '_' + parameter.key.lower()
-                
-                #name=translations.get(f"component.hon.entity.number.{translation_key}.name", parameter.key),
+                translation_key = (
+                    coordinator.device.appliance_type.lower()
+                    + "_"
+                    + parameter.key.lower()
+                )
+
+                # name=translations.get(f"component.hon.entity.number.{translation_key}.name", parameter.key),
 
                 description = NumberEntityDescription(
                     key=key,
                     name=f"{parameter.key}",
                     entity_category=EntityCategory.CONFIG,
-                    #entity_category=None,
-                    translation_key = translation_key,
+                    # entity_category=None,
+                    translation_key=translation_key,
                     icon=default_value.get("icon", None),
                     unit_of_measurement=default_value.get("unit_of_measurement", None),
                 )
@@ -105,33 +111,35 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
 class HonBaseNumberEntity(CoordinatorEntity, NumberEntity):
     def __init__(self, coordinator, appliance, key, sensor_name) -> None:
         super().__init__(coordinator)
-        self._coordinator   = coordinator
-        self._mac           = appliance["macAddress"]
-        self._type_id       = appliance["applianceTypeId"]
-        self._name          = appliance.get("nickName", APPLIANCE_DEFAULT_NAME.get(str(self._type_id), "Device ID: " + str(self._type_id)))
-        self._brand         = appliance["brand"]
-        self._model         = appliance["modelName"]
-        self._fw_version    = appliance["fwVersion"]
-        self._type_name     = appliance["applianceTypeName"]
-        self._key           = key
-        self._device        = coordinator.device
+        self._coordinator = coordinator
+        self._mac = appliance["macAddress"]
+        self._type_id = appliance["applianceTypeId"]
+        self._name = appliance.get(
+            "nickName",
+            APPLIANCE_DEFAULT_NAME.get(
+                str(self._type_id), "Device ID: " + str(self._type_id)
+            ),
+        )
+        self._brand = appliance["brand"]
+        self._model = appliance["modelName"]
+        self._fw_version = appliance["fwVersion"]
+        self._type_name = appliance["applianceTypeName"]
+        self._key = key
+        self._device = coordinator.device
 
-
-        #Generate unique ID from key
-        key_formatted = re.sub(r'(?<!^)(?=[A-Z])', '_', key).lower()
-        if( len(key_formatted) <= 0 ): 
-            key_formatted = re.sub(r'(?<!^)(?=[A-Z])', '_', sensor_name).lower()
+        # Generate unique ID from key
+        key_formatted = re.sub(r"(?<!^)(?=[A-Z])", "_", key).lower()
+        if len(key_formatted) <= 0:
+            key_formatted = re.sub(r"(?<!^)(?=[A-Z])", "_", sensor_name).lower()
         self._attr_unique_id = self._mac + "_" + key_formatted
-        
+
         self._attr_name = self._name + " " + sensor_name
         self.coordinator_update()
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (DOMAIN, self._mac, self._type_name)
-            },
+            "identifiers": {(DOMAIN, self._mac, self._type_name)},
             "name": self._name,
             "manufacturer": self._brand,
             "model": self._model,
@@ -150,7 +158,7 @@ class HonBaseNumberEntity(CoordinatorEntity, NumberEntity):
 
 
 class HonNumber(HonBaseNumberEntity):
-    _attr_has_entity_name = False  
+    _attr_has_entity_name = False
 
     def __init__(self, hon, coordinator, appliance, description) -> None:
         super().__init__(coordinator, appliance, description.key, description.name)
@@ -158,10 +166,10 @@ class HonNumber(HonBaseNumberEntity):
         self._coordinator = coordinator
         self._device = coordinator.device
         self.entity_description = description
-        
-        #param_display = description.key.replace("startProgram.", "").replace("tempSelZ", "Zone ")
-        #self._attr_name = f"{self._name} {param_display}"
-        #_LOGGER.error(self._attr_name)
+
+        # param_display = description.key.replace("startProgram.", "").replace("tempSelZ", "Zone ")
+        # self._attr_name = f"{self._name} {param_display}"
+        # _LOGGER.error(self._attr_name)
         self._attr_unique_id = f"{self._mac}-number-{description.key}"
 
     def _get_setting(self):

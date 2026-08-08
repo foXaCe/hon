@@ -1,14 +1,13 @@
 import logging
 
-from homeassistant.core import callback
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.helpers.entity import EntityCategory
+from homeassistant.core import callback
 from homeassistant.helpers import translation
+from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
 from .device import HonDevice
-from .parameter import HonParameterFixed, HonParameterEnum, HonParameterProgram
-
+from .parameter import HonParameterEnum, HonParameterFixed, HonParameterProgram
 
 _LOGGER = logging.getLogger(__name__)
 

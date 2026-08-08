@@ -1,0 +1,67 @@
+name: Bug Report
+description: Report a bug in hOn
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de fournir un maximum d'informations pour diagnostiquer rapidement.
+
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      placeholder: e.g. 2026.8.1
+    validations: { required: true }
+
+  - type: input
+    id: integration-version
+    attributes:
+      label: Integration version
+      placeholder: e.g. 0.8.4
+    validations: { required: true }
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installation method
+      options: [HACS, Manual, Other]
+    validations: { required: true }
+
+  - type: input
+    id: device-model
+    attributes:
+      label: Appliance model
+      description: e.g. AS25XCAHRA, HW 49AMC/1-80
+    validations: { required: true }
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug description
+      description: Que se passe-t-il ? Que devrait-il se passer ?
+    validations: { required: true }
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations: { required: true }
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Settings → System → Logs (filtrer par custom_components.hon)
+      render: shell
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics dump
+      description: Settings → Devices & Services → hOn → "..." → Download diagnostics

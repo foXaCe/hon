@@ -1,28 +1,51 @@
 # hOn
-[![GitHub](https://img.shields.io/github/license/gvigroux/hon?color=green)](https://github.com/gvigroux/hon/blob/main/LICENSE)
 
-<a href="https://www.buymeacoffee.com/gvigroux"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=gvigroux&button_colour=5F7FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" /></a>
+[![GitHub Release][releases-shield]][releases]
+[![License][license-shield]](LICENSE)
+[![hacs][hacsbadge]][hacs]
+[![CI][ci-shield]][ci]
+[![Maintenance][maintenance-shield]][maintenance]
+[![Project Maintenance][maintainer-shield]][maintainer]
+[![hassfest validation][hassfest-shield]][hassfest]
 
-Home Assistant component supporting all devices integrated with hOn cloud.
-- 2023/03/23 - I've decided to upgrade the main branch from the 'Full-Rework' branch. The old code is inside the legacy branch.
-This move is mandatory to be able maange all devices (even unknown).
-I hope that all the peoples that added their devices will test and upgrade this branch. Thanks :)
-- 2023/04/12 - Change directory structure to be HACS compliant
+Home Assistant component supporting all devices integrated with hOn cloud. The only option to have the climate compatibility.
 
-## pre-requisite
-Your appliances must be controlled by the hOn mobile application
-supported device: Haier Climate tested
+## Features
+
+- Climate control (Haier / Candy / Hoover heat pumps and ACs)
+- Water heaters and heat pump water heaters
+- Washing machines, washers-dryers and tumble dryers
+- Ovens, dish washers and wine coolers
+- Air purifiers
+- `hon.start_program` service to launch any available program
+- `hon.update_settings` service to update any single setting
+- Direct access to all possible services and parameters exposed by the hOn cloud
+
+## Requirements
+
+- Home Assistant >= 2024.1
+- An account on the hOn mobile application
+- Supported devices: Haier Climate tested
 
 ## Installation
 
-1. Create a directory ‘hon’ containing the code of the custom_components/hon folder in your `custom_components` directory. 
-2. OR you can add it through HACS > Integration > ... (top right) > Add custom depot > https://github.com/gvigroux/hon
-3. Restart HA
-4. Go to `Settings` - `Devices and Services` and `Add integration`. Search for `hOn` in search bar and select it
-5. Configure the integration with your hOn username and password
-6. Now you can see one new integration named with your email account with the entities and devices registered with hOn App. You can now add this entities in you panel
+### HACS (recommended)
 
-## How to run any program?
+1. Open HACS in Home Assistant
+2. Add this repo as a custom repository (type: Integration)
+3. Search "Haier hOn" and install
+4. Restart Home Assistant
+5. Settings → Devices & Services → Add Integration → "hOn"
+
+### Manual
+
+1. Copy `custom_components/hon/` to `<config>/custom_components/`
+2. Restart Home Assistant
+3. Add the integration from the UI
+
+## Configuration
+
+Configure the integration with your hOn username and password.
 
 You can launch any available program by using a dedicated service: `hon.start_program`.
 To get all the details about each program, you can go to the device and click on `Get programs details`
@@ -33,14 +56,12 @@ You will receive one notification per program, you just need to look and click a
 Now you you can see all programs and all possible settings value. Have fun!
 ![Bell](/images/notification.jpg)
 
-## You just want to update one settings?
+## Supported devices
 
-You can repeat above process with the setting option and the service: `hon.update_settings`.
-
-## Tested devices
 This integration has been tested with the following devices.
 
 ### Climate
+
 - AS07TS4HRA-M
 - AS25XCAHRA and AS35XCAHRA in 3x1 and 1x1 configuration with one/two outdoor units
 - AS35TEDHRA(M1) and AS25TEDHRA(M1) in 2x1 configuration with one outdoor unit
@@ -49,9 +70,11 @@ This integration has been tested with the following devices.
 - AD50S2SS1FA(H)
 
 ### Oven
+
 - Candy Oven - FCT825XL WIFI Model
 
 ### Washing Machine
+
 - HW 49AMC/1-80
 - HW90-B14959S8U1
 - hoover HWPDQ 49AMBC/1-S
@@ -59,17 +82,21 @@ This integration has been tested with the following devices.
 - HW110-B14979U1
 
 ### Wine Cooler
+
 - HWS42GDAU1
 - HWS77GDAU1
 
 ### Dish Washer
+
 - XIB 6B2D3FB
 - HF 5E5D0FW-17
 
 ### WashDryer Machine
+
 - HDQ 496AMBS/1-S
 
 ### Tumble Dryer
+
 - Hoover H-Dry 350, 9 kg Condenser Tumble Dryer HRE C9TBE-80
 - haier HD80-A3959
 - HRE H9A2TE-S
@@ -78,11 +105,52 @@ This integration has been tested with the following devices.
 - Candy ROE H9A3TCEX-S
 
 ### Air Purifier
+
 - hoover HHP30C011 (Air Purifier 300)
 - hoover HHP50CA011 (Air Purifier 500)
 
 ### Heat Pump Water Heater
+
 - Haier HP150M8-9 (only programs are working)
 
 ### Air to Water Heat Pump
+
 - Haier Monobloc GT R290
+
+## Credits
+
+This integration is based on the original work of gvigroux. Thanks to him for his contribution to the Home Assistant hOn community.
+
+## Troubleshooting
+
+Enable debug logging for the integration:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.hon: debug
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE)
+
+<!-- Badges -->
+[releases-shield]: https://img.shields.io/github/release/foXaCe/hon.svg?style=for-the-badge
+[releases]: https://github.com/foXaCe/hon/releases
+[license-shield]: https://img.shields.io/github/license/foXaCe/hon.svg?style=for-the-badge
+[hacs]: https://github.com/hacs/integration
+[hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
+[ci-shield]: https://img.shields.io/github/actions/workflow/status/foXaCe/hon/ci.yml?branch=main&style=for-the-badge
+[ci]: https://github.com/foXaCe/hon/actions/workflows/ci.yml
+[hassfest-shield]: https://img.shields.io/github/actions/workflow/status/foXaCe/hon/hassfest.yml?branch=main&style=for-the-badge&label=hassfest
+[hassfest]: https://github.com/foXaCe/hon/actions/workflows/hassfest.yml
+[maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg?style=for-the-badge
+[maintenance]: #
+[maintainer-shield]: https://img.shields.io/badge/maintainer-%40foXaCe-blue.svg?style=for-the-badge
+[maintainer]: https://github.com/foXaCe
