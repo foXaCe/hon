@@ -1,10 +1,12 @@
 {
   "domain": "hon",
   "name": "hOn",
-  "codeowners": ["@gvigroux"],
+  "codeowners": ["@foXaCe"],
   "config_flow": true,
-  "documentation": "https://github.com/gvigroux/hon",
+  "documentation": "https://github.com/foXaCe/hon",
+  "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/gvigroux/hon/issues",
+  "issue_tracker": "https://github.com/foXaCe/hon/issues",
+  "requirements": ["python-dateutil>=2.8"],
   "version": "0.8.4"
 }
