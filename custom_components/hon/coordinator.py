@@ -50,6 +50,7 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
         self._hon = hon
         self._appliance = appliance
         self._device = HonDevice(hon, self, appliance)
+        self._initial_context_loaded = False
 
     @property
     def device(self) -> HonDevice:
@@ -64,18 +65,24 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
         return self._device.mac_address
 
     async def _async_setup(self) -> None:
-        """Load commands and statistics once before the first refresh.
+        """Load commands, statistics and context once before the first refresh.
 
-        These two requests are independent, so running them concurrently
-        speeds up the boot.
+        These three requests are independent, so running them concurrently
+        replaces three serial round-trips (commands/statistics, then context)
+        with a single parallel batch, speeding up the boot.
         """
         await asyncio.gather(
             self._device.load_commands(),
             self._device.load_statistics(),
+            self._device.load_context(),
         )
+        self._initial_context_loaded = True
 
     async def _async_update_data(self) -> HonDevice:
         """Refresh the device context and return the device."""
+        if self._initial_context_loaded:
+            self._initial_context_loaded = False
+            return self._device
         try:
             await self._device.load_context()
         except aiohttp.ClientError as err:

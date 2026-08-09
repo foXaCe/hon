@@ -220,6 +220,82 @@ class HonConnection:
         finally:
             self._authorizing = False
 
+    async def async_restore_or_authorize(self) -> bool:
+        """Restore a persisted session when possible, else run a full login.
+
+        The CIAM endpoint does not accept ``grant_type=refresh_token``, so the
+        cheapest way to reuse a session is to hit the appliance-list with the
+        stored ``id``/``cognito`` tokens. When they are still valid this saves
+        the two PKCE round-trips on every HA boot; when they are stale, the
+        401 handling in :meth:`_async_request` transparently performs a full
+        login and retries, so a genuine credential failure is the only path
+        that falls back to an explicit :meth:`async_authorize`.
+        """
+        if not self._id_token or not self._cognito_token:
+            return await self.async_authorize()
+        # Prevent the 401 auto-reauth inside _async_request from running a
+        # redundant login (and a second appliance-list fetch) while we probe
+        # the stored tokens: a rejection should fall through to a full login
+        # once, below.
+        self._authorizing = True
+        try:
+            try:
+                restored = await self._load_appliances()
+                self._start_time = time.time()
+                return restored
+            except HonAuthenticationError:
+                return await self.async_authorize()
+        finally:
+            self._authorizing = False
+
+    async def _load_appliances(self) -> bool:
+        """Fetch the appliance list with the current tokens.
+
+        Returns ``True`` on success. Raises :class:`HonAuthenticationError`
+        when the cloud rejects the session; the caller decides whether to fall
+        back to a full login.
+        """
+        url = f"{API_URL}/unified-api/v1/view/appliance-list"
+        json_data = await self._async_request(
+            "POST", url, headers=self._headers, json={"deviceId": "homeassistant"}
+        )
+        try:
+            self._appliances = json_data["modules"]["applianceList"]["payload"][
+                "appliances"
+            ]
+        except (KeyError, TypeError):
+            _LOGGER.error("hOn Invalid Data after POST [%s]", url)
+            return False
+
+        _LOGGER.debug("Appliances loaded: %d", len(self._appliances))
+
+        # Keep only appliances that expose a MAC address and a type id
+        self._appliances = [
+            appliance
+            for appliance in self._appliances
+            if "macAddress" in appliance and "applianceTypeId" in appliance
+        ]
+        return True
+
+    def persist_tokens(self) -> None:
+        """Persist the current tokens back to the config entry.
+
+        Storing the fresh ``id``/``cognito`` tokens lets a later HA boot reuse
+        them (see :meth:`async_restore_or_authorize`) instead of always running
+        the full PKCE login. No-op during the config flow (no entry yet).
+        """
+        if self._hass is None or self._entry is None:
+            return
+        self._hass.config_entries.async_update_entry(
+            self._entry,
+            data={
+                **self._entry.data,
+                CONF_ID_TOKEN: self._id_token,
+                CONF_COGNITO_TOKEN: self._cognito_token,
+                CONF_REFRESH_TOKEN: self._refresh_token,
+            },
+        )
+
     async def _async_authorize(self) -> bool:
         # PKCE (S256) verifier + challenge
         code_verifier = (
@@ -276,29 +352,12 @@ class HonConnection:
             raise HonAuthenticationError("Invalid credentials") from None
 
         # 3) Load the appliance list from the unified-api view
-        url = f"{API_URL}/unified-api/v1/view/appliance-list"
-        json_data = await self._async_request(
-            "POST", url, headers=self._headers, json={"deviceId": "homeassistant"}
-        )
         try:
-            self._appliances = json_data["modules"]["applianceList"]["payload"][
-                "appliances"
-            ]
-        except (KeyError, TypeError):
-            _LOGGER.error("hOn Invalid Data after POST [%s]", url)
-            return False
-
-        _LOGGER.debug("Appliances loaded: %d", len(self._appliances))
-
-        # Keep only appliances that expose a MAC address and a type id
-        self._appliances = [
-            appliance
-            for appliance in self._appliances
-            if "macAddress" in appliance and "applianceTypeId" in appliance
-        ]
-
+            appliances_ok = await self._load_appliances()
+        except HonAuthenticationError:
+            raise
         self._start_time = time.time()
-        return True
+        return appliances_ok
 
     async def load_commands(self, appliance: dict[str, Any]) -> dict[str, Any]:
         """Retrieve the command catalogue for an appliance."""

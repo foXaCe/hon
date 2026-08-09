@@ -118,7 +118,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     """Set up the hOn integration for a config entry."""
     hon = HonConnection(hass, entry)
     try:
-        result = await hon.async_authorize()
+        result = await hon.async_restore_or_authorize()
     except HonConnectionError as err:
         raise ConfigEntryNotReady(f"hOn connection failed: {err}") from err
     except HonAuthenticationError as err:
@@ -129,6 +129,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
         raise ConfigEntryAuthFailed(
             translation_domain=DOMAIN, translation_key="auth_failed"
         )
+    hon.persist_tokens()
 
     # Log the appliance count only (MAC addresses are identifiers)
     _LOGGER.debug("Appliances loaded: %d", len(hon.appliances))

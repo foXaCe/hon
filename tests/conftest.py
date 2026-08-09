@@ -90,6 +90,8 @@ def mock_connection() -> MagicMock:
     connection = MagicMock()
     connection.appliances = [build_appliance()]
     connection.async_authorize = AsyncMock(return_value=True)
+    connection.async_restore_or_authorize = AsyncMock(return_value=True)
+    connection.persist_tokens = MagicMock()
     connection.async_close = AsyncMock()
     connection.async_get_context = AsyncMock(return_value=context_payload())
     connection.load_commands = AsyncMock(

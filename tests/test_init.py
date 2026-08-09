@@ -56,7 +56,7 @@ async def test_async_setup_entry_auth_failed(
     hass, mock_connection, config_entry
 ) -> None:
     """An authentication failure raises ConfigEntryAuthFailed."""
-    mock_connection.async_authorize = AsyncMock(
+    mock_connection.async_restore_or_authorize = AsyncMock(
         side_effect=HonAuthenticationError("bad")
     )
     with (
@@ -70,7 +70,7 @@ async def test_async_setup_entry_auth_failed_when_not_ok(
     hass, mock_connection, config_entry
 ) -> None:
     """A falsy authorize result raises ConfigEntryAuthFailed."""
-    mock_connection.async_authorize = AsyncMock(return_value=False)
+    mock_connection.async_restore_or_authorize = AsyncMock(return_value=False)
     with (
         patch("custom_components.hon.HonConnection", return_value=mock_connection),
         pytest.raises(ConfigEntryAuthFailed),
@@ -80,7 +80,9 @@ async def test_async_setup_entry_auth_failed_when_not_ok(
 
 async def test_async_setup_entry_not_ready(hass, mock_connection, config_entry) -> None:
     """A connection failure raises ConfigEntryNotReady."""
-    mock_connection.async_authorize = AsyncMock(side_effect=HonConnectionError("down"))
+    mock_connection.async_restore_or_authorize = AsyncMock(
+        side_effect=HonConnectionError("down")
+    )
     with (
         patch("custom_components.hon.HonConnection", return_value=mock_connection),
         pytest.raises(ConfigEntryNotReady),

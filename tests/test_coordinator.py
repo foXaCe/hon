@@ -85,16 +85,31 @@ def test_unique_id_prefix_with_entry(
 
 
 async def test_async_setup(coordinator) -> None:
-    """_async_setup loads commands and statistics once."""
+    """_async_setup loads commands, statistics and context once."""
     with (
         patch.object(coordinator.device, "load_commands", AsyncMock()) as load_commands,
         patch.object(
             coordinator.device, "load_statistics", AsyncMock()
         ) as load_statistics,
+        patch.object(coordinator.device, "load_context", AsyncMock()) as load_context,
     ):
         await coordinator._async_setup()
     load_commands.assert_awaited_once()
     load_statistics.assert_awaited_once()
+    load_context.assert_awaited_once()
+
+
+async def test_async_update_data_skips_first_context(coordinator) -> None:
+    """The first update after _async_setup returns the device without refetch."""
+    with (
+        patch.object(coordinator.device, "load_commands", AsyncMock()),
+        patch.object(coordinator.device, "load_statistics", AsyncMock()),
+        patch.object(coordinator.device, "load_context", AsyncMock()) as load_context,
+    ):
+        await coordinator._async_setup()
+        result = await coordinator._async_update_data()
+    assert result is coordinator.device
+    load_context.assert_awaited_once()  # only from _async_setup
 
 
 async def test_async_set_auth_failed(coordinator) -> None:

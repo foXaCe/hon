@@ -157,6 +157,97 @@ async def test_async_authorize_success() -> None:
     assert connection.appliances == [build_appliance()]
 
 
+async def test_async_restore_or_authorize_uses_stored_tokens() -> None:
+    """A session with stored tokens skips the PKCE round-trips."""
+    entry = make_entry()
+    connection = make_connection(
+        [
+            FakeResponse(
+                200,
+                {
+                    "modules": {
+                        "applianceList": {
+                            "payload": {"appliances": [build_appliance()]}
+                        }
+                    }
+                },
+            )
+        ],
+        entry=entry,
+    )
+    connection._id_token = "id"
+    connection._cognito_token = "cognito"
+    assert await connection.async_restore_or_authorize() is True
+    assert connection.appliances == [build_appliance()]
+    # Only the appliance-list request was made (no CIAM authorize/token)
+    assert len(connection._session.calls) == 1
+
+
+async def test_async_restore_or_authorize_falls_back_on_401() -> None:
+    """A rejected stored session triggers a full PKCE login."""
+    entry = make_entry()
+    connection = make_connection(
+        [
+            FakeResponse(401, {}),
+            *authorize_responses(),
+        ],
+        entry=entry,
+    )
+    connection._id_token = "stale"
+    connection._cognito_token = "stale"
+    with patch("custom_components.hon.api.client.asyncio.sleep", AsyncMock()):
+        assert await connection.async_restore_or_authorize() is True
+    assert connection._cognito_token == "cognito"
+    assert connection.appliances == [build_appliance()]
+
+
+async def test_async_restore_or_authorize_without_tokens() -> None:
+    """Without stored tokens the full login runs."""
+    connection = make_connection(authorize_responses())
+    connection._id_token = ""
+    connection._cognito_token = ""
+    assert await connection.async_restore_or_authorize() is True
+    assert connection.appliances == [build_appliance()]
+
+
+async def test_async_restore_or_authorize_auth_failed() -> None:
+    """A genuine credential failure after restore raises."""
+    entry = make_entry()
+    connection = make_connection(
+        [FakeResponse(401, {}), FakeResponse(200, {"error": "nope"})],
+        entry=entry,
+    )
+    connection._id_token = "stale"
+    connection._cognito_token = "stale"
+    with (
+        patch("custom_components.hon.api.client.asyncio.sleep", AsyncMock()),
+        pytest.raises(HonAuthenticationError),
+    ):
+        await connection.async_restore_or_authorize()
+
+
+async def test_persist_tokens_updates_entry(hass) -> None:
+    """persist_tokens writes the current tokens back to the config entry."""
+    entry = make_entry()
+    connection = HonConnection(hass, entry)
+    connection._id_token = "new-id"
+    connection._cognito_token = "new-cognito"
+    connection._refresh_token = "new-refresh"
+    with patch.object(hass.config_entries, "async_update_entry") as update_entry:
+        connection.persist_tokens()
+    update_entry.assert_called_once()
+    updated_data = update_entry.call_args.kwargs["data"]
+    assert updated_data["token"] == "new-id"
+    assert updated_data["cognito_token"] == "new-cognito"
+    assert updated_data["refresh_token"] == "new-refresh"
+
+
+async def test_persist_tokens_without_entry() -> None:
+    """persist_tokens is a no-op during the config flow (no entry)."""
+    connection = HonConnection(None, None, EMAIL, PASSWORD)
+    connection.persist_tokens()  # must not raise
+
+
 async def test_async_authorize_filters_appliances() -> None:
     """Appliances missing a MAC or a type id are dropped."""
     with_mac = {"macAddress": MAC, "applianceTypeId": 1, "brand": "haier"}

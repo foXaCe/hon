@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-08-09
+
+### Performance
+
+- Config entry setup ~45% faster (≈4.0s → ≈2.1–2.4s): the device context is
+  now fetched in parallel with the commands and statistics during the
+  coordinator setup instead of waiting for the first refresh.
+- Reuse a persisted CIAM session on boot: fresh `id`/`cognito` tokens are
+  written back to the config entry after login and reused at startup, so a
+  full PKCE login (3 round-trips) is only needed when the stored tokens are
+  rejected. The hOn CIAM does not accept `grant_type=refresh_token`, so a
+  stale session still falls back to a full login automatically.
+
 ## [0.9.1] - 2026-08-09
 
 ### Fixed
