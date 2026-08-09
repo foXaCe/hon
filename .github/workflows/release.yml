@@ -27,10 +27,8 @@ jobs:
       - uses: googleapis/release-please-action@v5
         id: release
         with:
-          release-type: simple
-          package-name: hon
-          extra-files: |
-            custom_components/hon/manifest.json
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
   publish-assets:
     name: Build + upload zip
