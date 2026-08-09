@@ -8,7 +8,8 @@
     ".": {
       "package-name": "hon",
       "release-type": "simple",
-      "extra-files": ["custom_components/hon/manifest.json"]
+      "extra-files": ["custom_components/hon/manifest.json"],
+      "last-release-sha": "7f577423d84c25e1b21734ead6e6db94bcc467e3"
     }
   }
 }
