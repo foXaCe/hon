@@ -19,6 +19,10 @@ jobs:
     name: Open / maintain Release PR
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The repository setting "Allow GitHub Actions to create and approve pull
+    # requests" is disabled, so release-please cannot open its PR yet. Keep the
+    # CI green until an admin enables it; the workflow then releases normally.
+    continue-on-error: true
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
