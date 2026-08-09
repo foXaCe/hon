@@ -257,13 +257,11 @@ async def test_button_platform(hass, full_device) -> None:
     assert len(entities) == 1
 
 
-async def test_button_platform_program_helper_only_ov_dw(
-    hass, mock_connection, appliance
-) -> None:
-    """The program-details button is limited to oven/dishwasher appliances."""
+async def test_button_platform_program_helper(hass, mock_connection, appliance) -> None:
+    """The program-details button is created for any device with startProgram."""
     from tests.devices.conftest import FakeDevice
 
-    appliance["applianceTypeId"] = 4  # OVEN
+    appliance["applianceTypeId"] = 1  # WM (washing machine)
     device = FakeDevice({"onOffStatus": "1"})
     device.commands = {
         "startProgram": MagicMock(),
@@ -278,6 +276,25 @@ async def test_button_platform_program_helper_only_ov_dw(
     await setup_button(hass, _entry(hass, mock_connection), async_add_entities)
     entities = async_add_entities.call_args[0][0]
     assert len(entities) == 2  # program details + settings
+
+
+async def test_button_platform_no_start_program(
+    hass, mock_connection, appliance
+) -> None:
+    """Devices without the startProgram command only get the settings button."""
+    from tests.devices.conftest import FakeDevice
+
+    device = FakeDevice({"onOffStatus": "1"})
+    device.commands = {"settings": MagicMock()}
+    device.settings = {}
+    coordinator = _coordinator(device)
+    mock_connection.appliances = [appliance]
+    mock_connection.async_get_coordinator = AsyncMock(return_value=coordinator)
+
+    async_add_entities = MagicMock()
+    await setup_button(hass, _entry(hass, mock_connection), async_add_entities)
+    entities = async_add_entities.call_args[0][0]
+    assert len(entities) == 1  # settings only
 
 
 async def test_climate_platform(hass, mock_connection, appliance_climate) -> None:

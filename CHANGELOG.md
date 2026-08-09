@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-08-09
+
+### Fixed
+
+- "Get programs details" button no longer created for washing machines and dryers: the start-button was wrongly gated on oven/dishwasher appliance types, so it was missing for any device exposing `startProgram`. The program-details button is now created for every appliance that has the `startProgram` command.
+
 ## [0.9.0] - 2026-08-09
 
 ### Added

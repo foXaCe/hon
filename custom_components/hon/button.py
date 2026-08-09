@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .const import PROGRAM_HELPER_APPLIANCE_TYPES
 from .devices.button import HonBaseButtonEntity, HonBaseSettingsButtonEntity
 
 PARALLEL_UPDATES = 0
@@ -25,10 +24,7 @@ async def async_setup_entry(
     for appliance in hon.appliances:
         coordinator = await hon.async_get_coordinator(appliance)
         device = coordinator.device
-        if (
-            appliance["applianceTypeId"] in PROGRAM_HELPER_APPLIANCE_TYPES
-            and "startProgram" in device.commands
-        ):
+        if "startProgram" in device.commands:
             appliances.extend([HonBaseButtonEntity(coordinator, appliance)])
         if "settings" in device.commands:
             appliances.extend([HonBaseSettingsButtonEntity(coordinator, appliance)])

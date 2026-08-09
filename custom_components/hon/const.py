@@ -76,12 +76,6 @@ APPLIANCE_DEFAULT_NAME = {
     "27": "Air to Water",
 }
 
-# Appliance families that expose multi-program start helpers.
-PROGRAM_HELPER_APPLIANCE_TYPES = {
-    APPLIANCE_TYPE.OVEN,
-    APPLIANCE_TYPE.DISH_WASHER,
-}
-
 CLIMATE_FAN_MODE = {
     FAN_OFF: "0",
     FAN_LOW: "3",
