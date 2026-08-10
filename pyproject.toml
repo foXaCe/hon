@@ -1,6 +1,6 @@
 [project]
 name = "hon"
-version = "0.9.2"
+version = "0.9.3"
 requires-python = ">=3.12"
 description = "Support of all Haier, Candy, Hoover appliances integrated in the official hOn mobile app."
 license = "MIT"

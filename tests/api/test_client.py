@@ -201,6 +201,37 @@ async def test_async_restore_or_authorize_falls_back_on_401() -> None:
     assert connection.appliances == [build_appliance()]
 
 
+async def test_async_restore_or_authorize_falls_back_on_403() -> None:
+    """A revoked stored session (403) also triggers a full PKCE login."""
+    entry = make_entry()
+    connection = make_connection(
+        [
+            FakeResponse(403, {}),
+            *authorize_responses(),
+        ],
+        entry=entry,
+    )
+    connection._id_token = "revoked"
+    connection._cognito_token = "revoked"
+    assert await connection.async_restore_or_authorize() is True
+    assert connection._cognito_token == "cognito"
+    assert connection.appliances == [build_appliance()]
+
+
+async def test_async_request_refreshes_on_403() -> None:
+    """A 403 during a data request triggers a token refresh then retries."""
+    connection = make_connection(
+        [
+            FakeResponse(403, {}),
+            *authorize_responses(),
+            FakeResponse(200, {"final": True}),
+        ]
+    )
+    result = await connection._async_request("GET", "https://example.test/x")
+    assert result == {"final": True}
+    assert connection._cognito_token == "cognito"
+
+
 async def test_async_restore_or_authorize_without_tokens() -> None:
     """Without stored tokens the full login runs."""
     connection = make_connection(authorize_responses())

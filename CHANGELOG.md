@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-08-10
+
+### Fixed
+
+- Appliance entities (selects, buttons…) stuck `unavailable` when the
+  persisted CIAM session was revoked with an HTTP 403: the session-restore
+  path now falls back to a full login for 401, 403 and 429 (not only 401),
+  and `_async_request` treats a 403 like a 401 (refresh + retry) so the
+  integration recovers instead of looping on "Config entry not ready".
+
 ## [0.9.2] - 2026-08-09
 
 ### Performance

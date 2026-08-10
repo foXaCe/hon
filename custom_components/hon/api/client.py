@@ -185,7 +185,7 @@ class HonConnection:
                     if response.status in RETRYABLE_STATUS and attempt <= retries:
                         await asyncio.sleep(min(2 ** (attempt - 1), 8))
                         continue
-                    if response.status == 401:
+                    if response.status == 401 or response.status == 403:
                         if self._authorizing:
                             raise HonAuthenticationError("Authentication failed")
                         await self.async_authorize()
@@ -243,7 +243,10 @@ class HonConnection:
                 restored = await self._load_appliances()
                 self._start_time = time.time()
                 return restored
-            except HonAuthenticationError:
+            except (HonAuthenticationError, HonConnectionError, HonRateLimitError):
+                # The stored session can be rejected with either a 401
+                # (expired) or a 403 (revoked) — both must fall back to a full
+                # login instead of surfacing as a connection failure.
                 return await self.async_authorize()
         finally:
             self._authorizing = False
