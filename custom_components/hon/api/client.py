@@ -22,6 +22,7 @@ import aiohttp
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 
 from ..const import (
     API_URL,
@@ -32,6 +33,7 @@ from ..const import (
     CONF_UPDATE_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DEVICE_MODEL,
+    DOMAIN,
     OS,
     OS_VERSION,
 )
@@ -53,6 +55,21 @@ SESSION_TIMEOUT = 600  # seconds
 REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 MAX_RETRIES = 3
+
+SETUP_CACHE_STORAGE_VERSION = 1
+# Boot writes one cache entry per appliance in a burst; a delayed save
+# coalesces them into a single disk write.
+SETUP_CACHE_SAVE_DELAY = 10.0
+
+
+def _setup_cache_store(hass: HomeAssistant, entry_id: str) -> Store[dict[str, Any]]:
+    """Return the Store holding the per-appliance setup cache of an entry."""
+    return Store(hass, SETUP_CACHE_STORAGE_VERSION, f"{DOMAIN}.setup_cache_{entry_id}")
+
+
+async def async_remove_setup_cache(hass: HomeAssistant, entry_id: str) -> None:
+    """Delete the on-disk setup cache of a removed config entry."""
+    await _setup_cache_store(hass, entry_id).async_remove()
 
 
 class HonConnection:
@@ -89,6 +106,8 @@ class HonConnection:
         self._start_time = time.time()
         self._appliances: list[dict[str, Any]] = []
         self._authorizing = False
+        self._setup_store: Store[dict[str, Any]] | None = None
+        self._setup_cache: dict[str, Any] = {}
 
     @property
     def _session_provider(self) -> aiohttp.ClientSession:
@@ -279,6 +298,58 @@ class HonConnection:
             if "macAddress" in appliance and "applianceTypeId" in appliance
         ]
         return True
+
+    async def async_load_setup_cache(self) -> None:
+        """Load the per-appliance setup cache (commands/statistics) from disk.
+
+        The command catalogue and lifetime statistics barely change between
+        boots, so a warm boot can reuse the last persisted payloads and only
+        block on the live device context (see the coordinator's
+        ``_async_setup``). No-op during the config flow (no entry yet).
+        """
+        if self._hass is None or self._entry is None:
+            return
+        self._setup_store = _setup_cache_store(self._hass, self._entry.entry_id)
+        self._setup_cache = await self._setup_store.async_load() or {}
+
+    def get_cached_setup(self, mac: str, fw_version: str) -> dict[str, Any] | None:
+        """Return the cached setup payloads for an appliance, if still valid.
+
+        The cache is keyed on the firmware and app versions: a firmware update
+        (or an integration app-version bump) changes the command catalogue, so
+        a stale entry falls back to a blocking fetch.
+        """
+        cached = self._setup_cache.get(mac)
+        if not isinstance(cached, dict):
+            return None
+        if (
+            cached.get("fw_version") != fw_version
+            or cached.get("app_version") != APP_VERSION
+            or "commands" not in cached
+            or "statistics" not in cached
+        ):
+            return None
+        return cached
+
+    def store_setup_cache(
+        self,
+        mac: str,
+        fw_version: str,
+        commands: dict[str, Any],
+        statistics: dict[str, Any],
+    ) -> None:
+        """Persist the setup payloads of an appliance for the next boot."""
+        if self._setup_store is None:
+            return
+        self._setup_cache[mac] = {
+            "fw_version": fw_version,
+            "app_version": APP_VERSION,
+            "commands": commands,
+            "statistics": statistics,
+        }
+        self._setup_store.async_delay_save(
+            lambda: self._setup_cache, SETUP_CACHE_SAVE_DELAY
+        )
 
     def persist_tokens(self) -> None:
         """Persist the current tokens back to the config entry.

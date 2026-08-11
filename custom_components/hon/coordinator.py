@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
+from .api.exceptions import HonError
 from .devices.device import HonDevice
 
 if TYPE_CHECKING:
@@ -46,6 +47,7 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
             _LOGGER,
             name="hOn Device",
             update_interval=update_interval,
+            config_entry=hon.entry,
         )
         self._hon = hon
         self._appliance = appliance
@@ -67,16 +69,69 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
     async def _async_setup(self) -> None:
         """Load commands, statistics and context once before the first refresh.
 
-        These three requests are independent, so running them concurrently
-        replaces three serial round-trips (commands/statistics, then context)
-        with a single parallel batch, speeding up the boot.
+        On a warm boot the command catalogue and statistics come from the
+        persisted setup cache, so only the live context blocks the setup; the
+        cached payloads are then re-fetched in the background. On a cold boot
+        (or after a firmware change) the three independent requests run as a
+        single parallel batch and the results are persisted for the next boot.
         """
-        await asyncio.gather(
-            self._device.load_commands(),
-            self._device.load_statistics(),
-            self._device.load_context(),
+        device = self._device
+        cached = self._hon.get_cached_setup(
+            device.mac_address, self._appliance.get("fwVersion")
         )
+        if cached is not None:
+            await device.load_commands(cached["commands"])
+            await device.load_statistics(cached["statistics"])
+            await device.load_context()
+            if self.config_entry is not None:
+                self.config_entry.async_create_background_task(
+                    self.hass,
+                    self._async_refresh_setup_cache(),
+                    f"hon deferred setup refresh {device.appliance_type}",
+                )
+        else:
+            commands, statistics, _ = await asyncio.gather(
+                device.load_commands(),
+                device.load_statistics(),
+                device.load_context(),
+            )
+            self._hon.store_setup_cache(
+                device.mac_address,
+                self._appliance.get("fwVersion"),
+                commands,
+                statistics,
+            )
         self._initial_context_loaded = True
+
+    async def _async_refresh_setup_cache(self) -> None:
+        """Re-fetch the catalogue and statistics that a warm boot served stale.
+
+        Runs in the background after a cache-backed setup: statistics evolve
+        over time and the catalogue can change server-side, so the live
+        payloads replace the cached ones and are persisted for the next boot.
+        A failure here is harmless — the cached data stays in place.
+        """
+        device = self._device
+        try:
+            commands, statistics = await asyncio.gather(
+                device.load_commands(),
+                device.load_statistics(),
+            )
+        except (aiohttp.ClientError, TimeoutError, HonError) as err:
+            # Log the appliance type only (MAC addresses are identifiers).
+            _LOGGER.debug(
+                "Deferred setup refresh failed for device type [%s]: %s",
+                device.appliance_type,
+                err,
+            )
+            return
+        self._hon.store_setup_cache(
+            device.mac_address,
+            self._appliance.get("fwVersion"),
+            commands,
+            statistics,
+        )
+        self.async_update_listeners()
 
     async def _async_update_data(self) -> HonDevice:
         """Refresh the device context and return the device."""

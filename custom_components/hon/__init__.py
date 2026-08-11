@@ -8,7 +8,6 @@ import logging
 from datetime import datetime
 
 import voluptuous as vol
-from dateutil.tz import gettz
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant, ServiceCall, callback
@@ -19,8 +18,9 @@ from homeassistant.exceptions import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 
-from .api.client import HonConnection, get_hOn_mac
+from .api.client import HonConnection, async_remove_setup_cache, get_hOn_mac
 from .api.exceptions import HonAuthenticationError, HonConnectionError
 from .const import DOMAIN, PLATFORMS
 
@@ -136,6 +136,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
 
     entry.runtime_data = hon
 
+    # Warm boots reuse the persisted command catalogues and statistics so
+    # only the live device contexts block the setup.
+    await hon.async_load_setup_cache()
+
     # Load every appliance context in parallel to keep the boot fast.
     coordinators = [
         await hon.async_get_coordinator(appliance) for appliance in hon.appliances
@@ -158,7 +162,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     async def handle_oven_start(call):
 
         delay_time = 0
-        tz = gettz(hass.config.time_zone)
+        tz = dt_util.get_default_time_zone()
 
         if "start" in call.data:
             date = datetime.strptime(
@@ -192,7 +196,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     async def handle_dishwasher_start(call):
 
         delay_time = 0
-        tz = gettz(hass.config.time_zone)
+        tz = dt_util.get_default_time_zone()
 
         if "start" in call.data:
             date = datetime.strptime(
@@ -226,7 +230,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     async def handle_washingmachine_start(call):
 
         delay_time = 0
-        tz = gettz(hass.config.time_zone)
+        tz = dt_util.get_default_time_zone()
         if "end" in call.data:
             date = datetime.strptime(call.data.get("end"), "%Y-%m-%d %H:%M:%S").replace(
                 tzinfo=tz
@@ -504,3 +508,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool
     await hon.async_close()
 
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: HonConfigEntry) -> None:
+    """Clean up the persisted setup cache when the entry is removed."""
+    await async_remove_setup_cache(hass, entry.entry_id)

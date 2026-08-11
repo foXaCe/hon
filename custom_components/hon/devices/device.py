@@ -337,11 +337,16 @@ class HonDevice(CoordinatorEntity):
             return command
         raise ValueError("No command to stop the device")
 
-    async def load_commands(self):
-        """Load the command catalogue from the cloud."""
-        commands = await self._hon.load_commands(self._appliance)
+    async def load_commands(self, payload=None):
+        """Load the command catalogue (from the cloud or a cached payload).
 
-        if not commands:
+        Returns the raw payload so callers can persist it for later boots.
+        The parsing never mutates the payload for the same reason.
+        """
+        if payload is None:
+            payload = await self._hon.load_commands(self._appliance)
+
+        if not payload:
             # Some appliances (e.g. a Haier TV) legitimately return no command
             # set. That is a normal state, not an error worth alarming about.
             _LOGGER.debug(
@@ -349,19 +354,22 @@ class HonDevice(CoordinatorEntity):
                 self._name,
                 self._type_name,
             )
-            return
+            return payload
 
         try:
-            self._appliance_model = commands.pop("applianceModel")
+            self._appliance_model = payload["applianceModel"]
         except KeyError:
             _LOGGER.error(
                 "Unable to load device commands. Please try to restart. Current value: [%s]",
-                commands,
+                payload,
             )
-            return
+            return payload
 
-        for item in ["options", "dictionaryId"]:
-            commands.pop(item)
+        commands = {
+            key: value
+            for key, value in payload.items()
+            if key not in ("applianceModel", "options", "dictionaryId")
+        }
 
         for command, attr in commands.items():
             if "parameters" in attr:
@@ -380,9 +388,17 @@ class HonDevice(CoordinatorEntity):
                     multi[program] = cmd
                     self._commands[command] = cmd
 
-    async def load_statistics(self):
-        """Load the lifetime statistics from the cloud."""
-        self._statistics = await self._hon.load_statistics(self)
+        return payload
+
+    async def load_statistics(self, payload=None):
+        """Load the lifetime statistics (from the cloud or a cached payload).
+
+        Returns the raw payload so callers can persist it for later boots.
+        """
+        if payload is None:
+            payload = await self._hon.load_statistics(self)
+        self._statistics = payload
+        return payload
 
     @property
     def device_info(self):

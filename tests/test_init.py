@@ -10,6 +10,7 @@ from homeassistant.helpers import entity_registry as er
 
 from custom_components.hon import (
     async_migrate_entry,
+    async_remove_entry,
     async_setup_entry,
     async_unload_entry,
 )
@@ -144,3 +145,28 @@ async def test_async_migrate_entry_skips_current_version(hass, config_entry) -> 
     """Entries already on the current version migrate without changes."""
     assert await async_migrate_entry(hass, config_entry) is True
     assert config_entry.version == 2
+
+
+async def test_async_setup_entry_loads_setup_cache(
+    hass, mock_connection, config_entry
+) -> None:
+    """Setup loads the persisted setup cache before the first refresh."""
+    coordinator = _coordinator_mock()
+    mock_connection.async_get_coordinator = AsyncMock(return_value=coordinator)
+
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        patch.object(hass.config_entries, "async_forward_entry_setups", AsyncMock()),
+    ):
+        assert await async_setup_entry(hass, config_entry) is True
+
+    mock_connection.async_load_setup_cache.assert_awaited_once()
+
+
+async def test_async_remove_entry_removes_cache(hass, config_entry) -> None:
+    """Removing the entry deletes the persisted setup cache."""
+    with patch(
+        "custom_components.hon.async_remove_setup_cache", AsyncMock()
+    ) as remove_cache:
+        await async_remove_entry(hass, config_entry)
+    remove_cache.assert_awaited_once_with(hass, config_entry.entry_id)

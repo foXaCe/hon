@@ -9,14 +9,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 
-from custom_components.hon.api.client import HonConnection, get_hOn_mac
+from custom_components.hon.api.client import (
+    HonConnection,
+    async_remove_setup_cache,
+    get_hOn_mac,
+)
 from custom_components.hon.api.exceptions import (
     HonAuthenticationError,
     HonConnectionError,
     HonPasswordChangeRequiredError,
     HonRateLimitError,
 )
-from custom_components.hon.const import CONF_UPDATE_INTERVAL, DOMAIN
+from custom_components.hon.const import APP_VERSION, CONF_UPDATE_INTERVAL, DOMAIN
 from custom_components.hon.coordinator import HonBaseCoordinator
 from tests.conftest import EMAIL, MAC, PASSWORD, build_appliance
 
@@ -661,3 +665,84 @@ async def test_session_provider_uses_hass_session(hass) -> None:
     ) as get_session:
         assert connection._session_provider == "hass-session"
     get_session.assert_called_once_with(hass)
+
+
+async def test_setup_cache_roundtrip(hass) -> None:
+    """store_setup_cache feeds get_cached_setup and keys on fw/app versions."""
+    entry = make_entry()
+    entry.entry_id = "entry-1"
+    connection = HonConnection(hass, entry)
+    await connection.async_load_setup_cache()
+    assert connection.get_cached_setup(MAC, "5.30.0") is None
+
+    connection.store_setup_cache(MAC, "5.30.0", {"applianceModel": {}}, {"s": 1})
+    cached = connection.get_cached_setup(MAC, "5.30.0")
+    assert cached is not None
+    assert cached["commands"] == {"applianceModel": {}}
+    assert cached["statistics"] == {"s": 1}
+    # A firmware change invalidates the cached entry.
+    assert connection.get_cached_setup(MAC, "6.0.0") is None
+
+
+async def test_get_cached_setup_app_version_mismatch(hass) -> None:
+    """An integration app-version bump invalidates the cached entry."""
+    entry = make_entry()
+    entry.entry_id = "entry-1"
+    connection = HonConnection(hass, entry)
+    await connection.async_load_setup_cache()
+    connection.store_setup_cache(MAC, "5.30.0", {}, {})
+    connection._setup_cache[MAC]["app_version"] = "0.0.0"
+    assert connection.get_cached_setup(MAC, "5.30.0") is None
+
+
+async def test_store_setup_cache_schedules_save(hass) -> None:
+    """store_setup_cache schedules a coalesced disk write."""
+    entry = make_entry()
+    entry.entry_id = "entry-1"
+    connection = HonConnection(hass, entry)
+    await connection.async_load_setup_cache()
+    with patch.object(connection._setup_store, "async_delay_save") as delay_save:
+        connection.store_setup_cache(MAC, "5.30.0", {}, {})
+    delay_save.assert_called_once()
+    assert delay_save.call_args.args[0]() is connection._setup_cache
+
+
+async def test_setup_cache_noop_without_entry() -> None:
+    """During the config flow the setup cache is inert."""
+    connection = HonConnection(None, None, EMAIL, PASSWORD)
+    await connection.async_load_setup_cache()
+    assert connection._setup_store is None
+    connection.store_setup_cache(MAC, "5.30.0", {}, {})  # must not raise
+    assert connection.get_cached_setup(MAC, "5.30.0") is None
+
+
+async def test_async_load_setup_cache_restores(hass, hass_storage) -> None:
+    """A persisted cache is restored from disk on the next boot."""
+    key = f"{DOMAIN}.setup_cache_entry-1"
+    hass_storage[key] = {
+        "version": 1,
+        "key": key,
+        "data": {
+            MAC: {
+                "fw_version": "5.30.0",
+                "app_version": APP_VERSION,
+                "commands": {"c": 1},
+                "statistics": {"s": 2},
+            }
+        },
+    }
+    entry = make_entry()
+    entry.entry_id = "entry-1"
+    connection = HonConnection(hass, entry)
+    await connection.async_load_setup_cache()
+    cached = connection.get_cached_setup(MAC, "5.30.0")
+    assert cached is not None
+    assert cached["commands"] == {"c": 1}
+
+
+async def test_async_remove_setup_cache(hass, hass_storage) -> None:
+    """Removing the cache deletes the on-disk store."""
+    key = f"{DOMAIN}.setup_cache_entry-1"
+    hass_storage[key] = {"version": 1, "key": key, "data": {}}
+    await async_remove_setup_cache(hass, "entry-1")
+    assert key not in hass_storage
