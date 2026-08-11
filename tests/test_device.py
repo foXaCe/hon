@@ -481,3 +481,52 @@ def test_device_parameters_property(device) -> None:
     }
     device._commands = {"startProgram": command}
     assert device.parameters == {"startProgram": {"tempSel": 4}}
+
+
+async def test_device_load_commands_from_cached_payload(
+    device, mock_connection
+) -> None:
+    """A cached payload is parsed without any cloud fetch nor mutation."""
+    payload = {
+        "applianceModel": {"options": {"op": 1}},
+        "options": {},
+        "dictionaryId": {},
+        "startProgram": {
+            "parameters": {"onOffStatus": {"typology": "enum", "enumValues": ["1"]}}
+        },
+    }
+    snapshot = {key: dict(value) for key, value in payload.items()}
+    mock_connection.load_commands = AsyncMock()
+
+    result = await device.load_commands(payload)
+
+    assert result is payload
+    assert payload == snapshot  # the parse must not mutate the cached payload
+    mock_connection.load_commands.assert_not_awaited()
+    assert "startProgram" in device.commands
+    assert device.commands_options == {"op": 1}
+
+
+async def test_device_load_commands_returns_payload(device, mock_connection) -> None:
+    """load_commands returns the raw payload for caching."""
+    payload = {
+        "applianceModel": {"options": {}},
+        "options": {},
+        "dictionaryId": {},
+        "startProgram": {
+            "parameters": {"onOffStatus": {"typology": "enum", "enumValues": ["1"]}}
+        },
+    }
+    mock_connection.load_commands = AsyncMock(return_value=payload)
+    assert await device.load_commands() is payload
+
+
+async def test_device_load_statistics_from_cached_payload(
+    device, mock_connection
+) -> None:
+    """A cached statistics payload is applied without any cloud fetch."""
+    mock_connection.load_statistics = AsyncMock()
+    result = await device.load_statistics({"programsCounter": 42})
+    assert result == {"programsCounter": 42}
+    assert device.statistics == {"programsCounter": 42}
+    mock_connection.load_statistics.assert_not_awaited()

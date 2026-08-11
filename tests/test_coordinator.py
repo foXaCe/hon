@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
@@ -116,3 +116,106 @@ async def test_async_set_auth_failed(coordinator) -> None:
     """async_set_auth_failed raises ConfigEntryAuthFailed."""
     with pytest.raises(ConfigEntryAuthFailed):
         await coordinator.async_set_auth_failed(HonConnectionError("expired"))
+
+
+async def test_async_setup_cold_persists_cache(coordinator, mock_connection) -> None:
+    """A cold boot fetches everything and persists the payloads."""
+    commands_payload = {"applianceModel": {}}
+    statistics_payload = {"programsCounter": 3}
+    with (
+        patch.object(
+            coordinator.device,
+            "load_commands",
+            AsyncMock(return_value=commands_payload),
+        ),
+        patch.object(
+            coordinator.device,
+            "load_statistics",
+            AsyncMock(return_value=statistics_payload),
+        ),
+        patch.object(coordinator.device, "load_context", AsyncMock()),
+    ):
+        await coordinator._async_setup()
+    mock_connection.store_setup_cache.assert_called_once_with(
+        MAC, "5.30.0", commands_payload, statistics_payload
+    )
+
+
+async def test_async_setup_warm_uses_cache(
+    hass, mock_connection, appliance, config_entry
+) -> None:
+    """A warm boot applies the cached payloads and refreshes them behind."""
+    mock_connection.entry = config_entry
+    mock_connection.get_cached_setup = MagicMock(
+        return_value={
+            "fw_version": "5.30.0",
+            "app_version": "app",
+            "commands": {"c": 1},
+            "statistics": {"s": 2},
+        }
+    )
+    coordinator = HonBaseCoordinator(
+        hass, mock_connection, appliance, timedelta(seconds=60)
+    )
+    with (
+        patch.object(coordinator.device, "load_commands", AsyncMock()) as load_commands,
+        patch.object(
+            coordinator.device, "load_statistics", AsyncMock()
+        ) as load_statistics,
+        patch.object(coordinator.device, "load_context", AsyncMock()) as load_context,
+    ):
+        await coordinator._async_setup()
+        load_commands.assert_awaited_once_with({"c": 1})
+        load_statistics.assert_awaited_once_with({"s": 2})
+        load_context.assert_awaited_once()
+        mock_connection.store_setup_cache.assert_not_called()
+        await hass.async_block_till_done(wait_background_tasks=True)
+    # The deferred refresh re-fetched the live payloads and persisted them.
+    assert load_commands.await_count == 2
+    assert load_commands.await_args.args == ()
+    mock_connection.store_setup_cache.assert_called_once()
+
+
+async def test_async_setup_warm_without_entry_skips_refresh(
+    hass, mock_connection, appliance
+) -> None:
+    """Without a config entry the warm boot skips the background refresh."""
+    mock_connection.get_cached_setup = MagicMock(
+        return_value={
+            "fw_version": "5.30.0",
+            "app_version": "app",
+            "commands": {},
+            "statistics": {},
+        }
+    )
+    coordinator = HonBaseCoordinator(
+        hass, mock_connection, appliance, timedelta(seconds=60)
+    )
+    with (
+        patch.object(coordinator.device, "load_commands", AsyncMock()) as load_commands,
+        patch.object(coordinator.device, "load_statistics", AsyncMock()),
+        patch.object(coordinator.device, "load_context", AsyncMock()),
+    ):
+        await coordinator._async_setup()
+        await hass.async_block_till_done(wait_background_tasks=True)
+    load_commands.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        HonConnectionError("down"),
+        aiohttp.ClientError("boom"),
+        TimeoutError("timeout"),
+    ],
+)
+async def test_deferred_refresh_failure_keeps_cache(
+    coordinator, mock_connection, exc: Exception
+) -> None:
+    """A failed deferred refresh leaves the cached payloads untouched."""
+    with (
+        patch.object(coordinator.device, "load_commands", AsyncMock(side_effect=exc)),
+        patch.object(coordinator.device, "load_statistics", AsyncMock()),
+    ):
+        await coordinator._async_refresh_setup_cache()
+    mock_connection.store_setup_cache.assert_not_called()

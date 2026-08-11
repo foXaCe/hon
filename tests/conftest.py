@@ -101,6 +101,9 @@ def mock_connection() -> MagicMock:
     connection.async_set = AsyncMock(return_value=True)
     connection.send_command = AsyncMock(return_value=True)
     connection.entry = None
+    connection.async_load_setup_cache = AsyncMock()
+    connection.get_cached_setup = MagicMock(return_value=None)
+    connection.store_setup_cache = MagicMock()
     return connection
 
 
