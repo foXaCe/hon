@@ -19,7 +19,7 @@ from custom_components.hon.api.exceptions import (
     HonConnectionError,
 )
 from custom_components.hon.const import DOMAIN, PLATFORMS
-from tests.conftest import EMAIL
+from tests.conftest import EMAIL, MAC, MAC2, build_appliance
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
@@ -170,3 +170,97 @@ async def test_async_remove_entry_removes_cache(hass, config_entry) -> None:
     ) as remove_cache:
         await async_remove_entry(hass, config_entry)
     remove_cache.assert_awaited_once_with(hass, config_entry.entry_id)
+
+
+async def test_async_setup_entry_warm_parallel(
+    hass, mock_connection, config_entry
+) -> None:
+    """A warm boot probes the session and loads contexts concurrently."""
+    cached = build_appliance()
+    fresh = build_appliance(extra={"fwVersion": "6.0.0"})
+    mock_connection.get_cached_appliances = MagicMock(return_value=[cached])
+    mock_connection.appliances = [fresh]
+    coordinator = _coordinator_mock()
+    coordinator.device.mac_address = MAC
+    mock_connection.async_get_coordinator = AsyncMock(return_value=coordinator)
+
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        patch.object(hass.config_entries, "async_forward_entry_setups", AsyncMock()),
+    ):
+        assert await async_setup_entry(hass, config_entry) is True
+
+    mock_connection.async_restore_or_authorize.assert_awaited_once()
+    coordinator.async_config_entry_first_refresh.assert_awaited_once()
+    coordinator.apply_appliance_update.assert_called_once_with(fresh)
+    mock_connection.prune_coordinators.assert_called_once_with({MAC})
+    mock_connection.store_cached_appliances.assert_called_once()
+
+
+async def test_async_setup_entry_warm_removed_appliance_does_not_block(
+    hass, mock_connection, config_entry
+) -> None:
+    """A cached appliance gone from the account must not block the setup."""
+    removed = build_appliance(mac=MAC2)
+    fresh = build_appliance()
+    stale_coordinator = _coordinator_mock()
+    stale_coordinator.device.mac_address = MAC2
+    stale_coordinator.async_config_entry_first_refresh = AsyncMock(
+        side_effect=ConfigEntryNotReady("gone")
+    )
+    fresh_coordinator = _coordinator_mock()
+    fresh_coordinator.device.mac_address = MAC
+    mock_connection.get_cached_appliances = MagicMock(return_value=[removed])
+    mock_connection.appliances = [fresh]
+    mock_connection.async_get_coordinator = AsyncMock(
+        side_effect=[stale_coordinator, fresh_coordinator]
+    )
+
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        patch.object(hass.config_entries, "async_forward_entry_setups", AsyncMock()),
+    ):
+        assert await async_setup_entry(hass, config_entry) is True
+
+    fresh_coordinator.async_config_entry_first_refresh.assert_awaited_once()
+    mock_connection.prune_coordinators.assert_called_once_with({MAC})
+
+
+async def test_async_setup_entry_warm_refresh_failure_still_owned(
+    hass, mock_connection, config_entry
+) -> None:
+    """A refresh failure for an appliance still owned surfaces as not-ready."""
+    appliance = build_appliance()
+    mock_connection.get_cached_appliances = MagicMock(return_value=[appliance])
+    mock_connection.appliances = [appliance]
+    coordinator = _coordinator_mock()
+    coordinator.device.mac_address = MAC
+    coordinator.async_config_entry_first_refresh = AsyncMock(
+        side_effect=ConfigEntryNotReady("down")
+    )
+    mock_connection.async_get_coordinator = AsyncMock(return_value=coordinator)
+
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        pytest.raises(ConfigEntryNotReady),
+    ):
+        await async_setup_entry(hass, config_entry)
+
+
+async def test_async_setup_entry_warm_probe_auth_failure(
+    hass, mock_connection, config_entry
+) -> None:
+    """An auth failure during the parallel probe raises ConfigEntryAuthFailed."""
+    mock_connection.get_cached_appliances = MagicMock(return_value=[build_appliance()])
+    coordinator = _coordinator_mock()
+    coordinator.device.mac_address = MAC
+    mock_connection.async_get_coordinator = AsyncMock(return_value=coordinator)
+    mock_connection.async_restore_or_authorize = AsyncMock(
+        side_effect=HonAuthenticationError("bad")
+    )
+
+    with (
+        patch("custom_components.hon.HonConnection", return_value=mock_connection),
+        pytest.raises(ConfigEntryAuthFailed),
+    ):
+        await async_setup_entry(hass, config_entry)
