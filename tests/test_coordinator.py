@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.hon.api.exceptions import HonConnectionError
 from custom_components.hon.coordinator import HonBaseCoordinator
-from tests.conftest import EMAIL, MAC
+from tests.conftest import EMAIL, MAC, build_appliance
 
 
 @pytest.fixture
@@ -219,3 +219,11 @@ async def test_deferred_refresh_failure_keeps_cache(
     ):
         await coordinator._async_refresh_setup_cache()
     mock_connection.store_setup_cache.assert_not_called()
+
+
+def test_apply_appliance_update(coordinator) -> None:
+    """The fresh appliance payload replaces the cached one in place."""
+    fresh = build_appliance(extra={"fwVersion": "9.9.9"})
+    coordinator.apply_appliance_update(fresh)
+    assert coordinator.device.appliance["fwVersion"] == "9.9.9"
+    assert coordinator.device.appliance is coordinator._appliance

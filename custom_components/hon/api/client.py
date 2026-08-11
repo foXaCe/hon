@@ -60,6 +60,8 @@ SETUP_CACHE_STORAGE_VERSION = 1
 # Boot writes one cache entry per appliance in a burst; a delayed save
 # coalesces them into a single disk write.
 SETUP_CACHE_SAVE_DELAY = 10.0
+# Reserved key of the cached appliance list (never collides with a MAC).
+APPLIANCES_CACHE_KEY = "__appliances__"
 
 
 def _setup_cache_store(hass: HomeAssistant, entry_id: str) -> Store[dict[str, Any]]:
@@ -105,7 +107,8 @@ class HonConnection:
 
         self._start_time = time.time()
         self._appliances: list[dict[str, Any]] = []
-        self._authorizing = False
+        self._auth_lock = asyncio.Lock()
+        self._auth_generation = 0
         self._setup_store: Store[dict[str, Any]] | None = None
         self._setup_cache: dict[str, Any] = {}
 
@@ -179,37 +182,43 @@ class HonConnection:
         *,
         params: dict[str, Any] | None = None,
         json: Any | None = None,
-        headers: dict[str, str] | None = None,
+        authenticated: bool = False,
         return_text: bool = False,
         retries: int = MAX_RETRIES,
+        auto_reauth: bool = True,
     ) -> dict[str, Any]:
         """Perform a request with timeout, backoff and token refresh.
 
         Returns the JSON body of a successful (2xx) response, or the raw text
-        when ``return_text`` is set.
+        when ``return_text`` is set. With ``auto_reauth`` (the default) a
+        401/403 triggers a serialized re-login and a retry; the login flow
+        itself and the session probe disable it so a rejection surfaces as
+        :class:`HonAuthenticationError` instead of recursing.
+        ``authenticated`` builds the token headers on every attempt, so a
+        retry after a re-login sends the fresh tokens (not the ones captured
+        when the call started).
         """
         session = self._session_provider
         attempt = 0
         while True:
             attempt += 1
+            auth_generation = self._auth_generation
             try:
                 async with session.request(
                     method,
                     url,
                     params=params,
                     json=json,
-                    headers=headers,
+                    headers=self._headers if authenticated else None,
                     timeout=REQUEST_TIMEOUT,
                 ) as response:
                     if response.status in RETRYABLE_STATUS and attempt <= retries:
                         await asyncio.sleep(min(2 ** (attempt - 1), 8))
                         continue
                     if response.status == 401 or response.status == 403:
-                        if self._authorizing:
+                        if not auto_reauth or attempt > retries:
                             raise HonAuthenticationError("Authentication failed")
-                        await self.async_authorize()
-                        if attempt > retries:
-                            raise HonAuthenticationError("Authentication failed")
+                        await self.async_authorize(generation=auth_generation)
                         continue
                     if response.status == 429:
                         raise HonRateLimitError("hOn API rate limit reached")
@@ -225,19 +234,29 @@ class HonConnection:
                     raise HonConnectionError(f"Request failed: {err}") from err
                 await asyncio.sleep(min(2 ** (attempt - 1), 8))
 
-    async def async_authorize(self) -> bool:
+    async def async_authorize(self, *, generation: int | None = None) -> bool:
         """Authenticate against the hOn CIAM endpoint and load the appliances.
 
         Replaces the legacy Salesforce Aura / OAuth2 login that Haier retired in
         2026-06: the app now logs in through /ciam/authorize + /ciam/token (PKCE)
         and reads appliances from /unified-api/v1/view/appliance-list. The old
         /commands/v1/appliance endpoint now returns an empty list.
+
+        Logins are serialized: concurrent 401 handlers pass the auth
+        ``generation`` they observed when their request failed, so whoever
+        loses the race skips the redundant login and just retries with the
+        tokens the winner obtained.
         """
-        self._authorizing = True
-        try:
-            return await self._async_authorize()
-        finally:
-            self._authorizing = False
+        if generation is None:
+            generation = self._auth_generation
+        async with self._auth_lock:
+            if self._auth_generation != generation:
+                # Another task re-authenticated since the caller observed the
+                # failure; the tokens are already fresh.
+                return True
+            result = await self._async_authorize()
+            self._auth_generation += 1
+            return result
 
     async def async_restore_or_authorize(self) -> bool:
         """Restore a persisted session when possible, else run a full login.
@@ -245,32 +264,22 @@ class HonConnection:
         The CIAM endpoint does not accept ``grant_type=refresh_token``, so the
         cheapest way to reuse a session is to hit the appliance-list with the
         stored ``id``/``cognito`` tokens. When they are still valid this saves
-        the two PKCE round-trips on every HA boot; when they are stale, the
-        401 handling in :meth:`_async_request` transparently performs a full
-        login and retries, so a genuine credential failure is the only path
-        that falls back to an explicit :meth:`async_authorize`.
+        the two PKCE round-trips on every HA boot; when they are stale or
+        revoked (401/403), the probe falls back to a single full login.
         """
         if not self._id_token or not self._cognito_token:
             return await self.async_authorize()
-        # Prevent the 401 auto-reauth inside _async_request from running a
-        # redundant login (and a second appliance-list fetch) while we probe
-        # the stored tokens: a rejection should fall through to a full login
-        # once, below.
-        self._authorizing = True
         try:
-            try:
-                restored = await self._load_appliances()
-                self._start_time = time.time()
-                return restored
-            except (HonAuthenticationError, HonConnectionError, HonRateLimitError):
-                # The stored session can be rejected with either a 401
-                # (expired) or a 403 (revoked) — both must fall back to a full
-                # login instead of surfacing as a connection failure.
-                return await self.async_authorize()
-        finally:
-            self._authorizing = False
+            restored = await self._load_appliances(auto_reauth=False)
+            self._start_time = time.time()
+            return restored
+        except (HonAuthenticationError, HonConnectionError, HonRateLimitError):
+            # The stored session can be rejected with either a 401
+            # (expired) or a 403 (revoked) — both must fall back to a full
+            # login instead of surfacing as a connection failure.
+            return await self.async_authorize()
 
-    async def _load_appliances(self) -> bool:
+    async def _load_appliances(self, auto_reauth: bool = True) -> bool:
         """Fetch the appliance list with the current tokens.
 
         Returns ``True`` on success. Raises :class:`HonAuthenticationError`
@@ -279,7 +288,11 @@ class HonConnection:
         """
         url = f"{API_URL}/unified-api/v1/view/appliance-list"
         json_data = await self._async_request(
-            "POST", url, headers=self._headers, json={"deviceId": "homeassistant"}
+            "POST",
+            url,
+            authenticated=True,
+            json={"deviceId": "homeassistant"},
+            auto_reauth=auto_reauth,
         )
         try:
             self._appliances = json_data["modules"]["applianceList"]["payload"][
@@ -351,6 +364,40 @@ class HonConnection:
             lambda: self._setup_cache, SETUP_CACHE_SAVE_DELAY
         )
 
+    def get_cached_appliances(self) -> list[dict[str, Any]] | None:
+        """Return the appliance list persisted by the previous boot, if any.
+
+        A warm boot uses it to fetch the device contexts concurrently with
+        the session probe instead of waiting for the fresh list; the probe
+        result then reconciles additions/removals (see ``async_setup_entry``).
+        """
+        cached = self._setup_cache.get(APPLIANCES_CACHE_KEY)
+        if not isinstance(cached, dict) or cached.get("app_version") != APP_VERSION:
+            return None
+        appliances = cached.get("appliances")
+        if not isinstance(appliances, list) or not appliances:
+            return None
+        return appliances
+
+    def store_cached_appliances(self) -> None:
+        """Persist the current appliance list for the next boot."""
+        if self._setup_store is None or not self._appliances:
+            return
+        self._setup_cache[APPLIANCES_CACHE_KEY] = {
+            "app_version": APP_VERSION,
+            "appliances": self._appliances,
+        }
+        self._setup_store.async_delay_save(
+            lambda: self._setup_cache, SETUP_CACHE_SAVE_DELAY
+        )
+
+    def prune_coordinators(self, macs: set[str]) -> None:
+        """Drop the coordinators (and cache entries) of removed appliances."""
+        for mac in list(self._coordinator_dict):
+            if mac not in macs:
+                self._coordinator_dict.pop(mac)
+                self._setup_cache.pop(mac, None)
+
     def persist_tokens(self) -> None:
         """Persist the current tokens back to the config entry.
 
@@ -389,14 +436,18 @@ class HonConnection:
         }
         try:
             json_data = await self._async_request(
-                "GET", f"{API_URL}/ciam/authorize", params=params
+                "GET", f"{API_URL}/ciam/authorize", params=params, auto_reauth=False
             )
         except (aiohttp.ContentTypeError, json_module.JSONDecodeError):
             # The cloud may reply with a "ChangePassword" HTML page instead of
             # JSON when the credentials are valid but a password reset is
             # mandatory. Surface that as a dedicated error.
             text = await self._async_request(
-                "GET", f"{API_URL}/ciam/authorize", params=params, return_text=True
+                "GET",
+                f"{API_URL}/ciam/authorize",
+                params=params,
+                return_text=True,
+                auto_reauth=False,
             )
             if "ChangePassword" in text.get("_text", ""):
                 raise HonPasswordChangeRequiredError(
@@ -415,6 +466,7 @@ class HonConnection:
             "POST",
             f"{API_URL}/ciam/token",
             json={"session_id": session_id, "code_verifier": code_verifier},
+            auto_reauth=False,
         )
         try:
             tokens = json_data["tokens"]
@@ -427,7 +479,7 @@ class HonConnection:
 
         # 3) Load the appliance list from the unified-api view
         try:
-            appliances_ok = await self._load_appliances()
+            appliances_ok = await self._load_appliances(auto_reauth=False)
         except HonAuthenticationError:
             raise
         self._start_time = time.time()
@@ -448,7 +500,7 @@ class HonConnection:
         }
         url = f"{API_URL}/commands/v1/retrieve"
         json_data = await self._async_request(
-            "GET", url, params=params, headers=self._headers
+            "GET", url, params=params, authenticated=True
         )
         result = json_data.get("payload", {})
         if not result:
@@ -473,7 +525,7 @@ class HonConnection:
         }
         url = f"{API_URL}/commands/v1/context"
         json_data = await self._async_request(
-            "GET", url, params=params, headers=self._headers
+            "GET", url, params=params, authenticated=True
         )
         _LOGGER.debug("Context fetched for device type [%s]", device.appliance_type)
         return json_data.get("payload", {})
@@ -486,7 +538,7 @@ class HonConnection:
         }
         url = f"{API_URL}/commands/v1/statistics"
         json_data = await self._async_request(
-            "GET", url, params=params, headers=self._headers
+            "GET", url, params=params, authenticated=True
         )
         _LOGGER.debug("Statistics fetched for device type [%s]", device.appliance_type)
         return json_data.get("payload", {})
@@ -535,7 +587,7 @@ class HonConnection:
             data = await self._async_request(
                 "POST",
                 f"{API_URL}/commands/v1/send",
-                headers=self._headers,
+                authenticated=True,
                 json=command,
             )
         except (json_module.JSONDecodeError, HonConnectionError):
@@ -600,7 +652,7 @@ class HonConnection:
             data = await self._async_request(
                 "POST",
                 f"{API_URL}/commands/v1/send",
-                headers=self._headers,
+                authenticated=True,
                 json=payload,
             )
         except (json_module.JSONDecodeError, HonConnectionError):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -346,11 +347,12 @@ async def test_async_authorize_invalid_appliance_payload() -> None:
 
 
 async def test_async_authorize_401_loop_avoided() -> None:
-    """A 401 while authorizing raises instead of looping."""
+    """A 401 with auto_reauth disabled raises instead of looping."""
     connection = make_connection([FakeResponse(401, {})])
-    connection._authorizing = True
     with pytest.raises(HonAuthenticationError):
-        await connection._async_request("GET", "https://example.test/x")
+        await connection._async_request(
+            "GET", "https://example.test/x", auto_reauth=False
+        )
 
 
 async def test_async_request_retries_on_500() -> None:
@@ -746,3 +748,91 @@ async def test_async_remove_setup_cache(hass, hass_storage) -> None:
     hass_storage[key] = {"version": 1, "key": key, "data": {}}
     await async_remove_setup_cache(hass, "entry-1")
     assert key not in hass_storage
+
+
+async def test_concurrent_authorize_single_login() -> None:
+    """Concurrent re-auth handlers are deduplicated into a single login."""
+    connection = make_connection()
+
+    async def _slow_login() -> bool:
+        await asyncio.sleep(0)
+        return True
+
+    generation = connection._auth_generation
+    with patch.object(
+        connection, "_async_authorize", AsyncMock(side_effect=_slow_login)
+    ) as login:
+        results = await asyncio.gather(
+            connection.async_authorize(generation=generation),
+            connection.async_authorize(generation=generation),
+        )
+    assert results == [True, True]
+    login.assert_awaited_once()
+
+
+async def test_request_retry_uses_fresh_tokens() -> None:
+    """After a re-login the retried request sends the fresh tokens."""
+    connection = make_connection(
+        [
+            FakeResponse(401, {}),
+            *authorize_responses(),
+            FakeResponse(200, {"final": True}),
+        ]
+    )
+    connection._id_token = "stale"
+    connection._cognito_token = "stale"
+    result = await connection._async_request(
+        "GET", "https://example.test/x", authenticated=True
+    )
+    assert result == {"final": True}
+    calls = connection._session.calls
+    assert calls[0][2]["headers"]["id-token"] == "stale"
+    assert calls[-1][2]["headers"]["id-token"] == "id"
+
+
+async def test_appliances_cache_roundtrip(hass) -> None:
+    """The appliance list persists and restores through the setup cache."""
+    entry = make_entry()
+    entry.entry_id = "entry-1"
+    connection = HonConnection(hass, entry)
+    await connection.async_load_setup_cache()
+    assert connection.get_cached_appliances() is None
+
+    connection._appliances = [build_appliance()]
+    connection.store_cached_appliances()
+    assert connection.get_cached_appliances() == [build_appliance()]
+
+
+async def test_appliances_cache_app_version_mismatch(hass) -> None:
+    """An integration app-version bump invalidates the cached list."""
+    entry = make_entry()
+    entry.entry_id = "entry-1"
+    connection = HonConnection(hass, entry)
+    await connection.async_load_setup_cache()
+    connection._appliances = [build_appliance()]
+    connection.store_cached_appliances()
+    connection._setup_cache["__appliances__"]["app_version"] = "0.0.0"
+    assert connection.get_cached_appliances() is None
+
+
+async def test_store_cached_appliances_noop_without_store() -> None:
+    """During the config flow the appliance cache is inert."""
+    connection = HonConnection(None, None, EMAIL, PASSWORD)
+    connection._appliances = [build_appliance()]
+    connection.store_cached_appliances()  # must not raise
+    assert connection.get_cached_appliances() is None
+
+
+async def test_prune_coordinators(hass) -> None:
+    """Pruning drops the coordinator and cache entry of removed appliances."""
+    entry = make_entry()
+    connection = HonConnection(hass, entry)
+    await connection.async_get_coordinator(build_appliance())
+    connection._setup_cache[MAC] = {"fw_version": "5.30.0"}
+
+    connection.prune_coordinators({MAC})
+    assert await connection.async_get_existing_coordinator(MAC) is not None
+
+    connection.prune_coordinators(set())
+    assert await connection.async_get_existing_coordinator(MAC) is None
+    assert MAC not in connection._setup_cache

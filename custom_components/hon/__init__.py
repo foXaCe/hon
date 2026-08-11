@@ -6,6 +6,7 @@ import ast
 import asyncio
 import logging
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -23,6 +24,9 @@ from homeassistant.util import dt as dt_util
 from .api.client import HonConnection, async_remove_setup_cache, get_hOn_mac
 from .api.exceptions import HonAuthenticationError, HonConnectionError
 from .const import DOMAIN, PLATFORMS
+
+if TYPE_CHECKING:
+    from .coordinator import HonBaseCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 SERVICE_REGISTRY = "service_registry"
@@ -117,8 +121,54 @@ async def async_migrate_entry(hass: HomeAssistant, entry: HonConfigEntry) -> boo
 async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     """Set up the hOn integration for a config entry."""
     hon = HonConnection(hass, entry)
+    entry.runtime_data = hon
+
+    # Warm boots reuse the persisted appliance list, command catalogues and
+    # statistics so the boot only blocks on the live requests.
+    await hon.async_load_setup_cache()
+    cached_appliances = hon.get_cached_appliances()
+
+    preloaded: dict[str, HonBaseCoordinator] = {}
     try:
-        result = await hon.async_restore_or_authorize()
+        if cached_appliances:
+            # Warm boot: probe the persisted session and load the cached
+            # appliances' context concurrently — one serial round-trip less
+            # than waiting for the fresh appliance list first.
+            coordinators = [
+                await hon.async_get_coordinator(appliance)
+                for appliance in cached_appliances
+            ]
+            preloaded = {
+                coordinator.device.mac_address: coordinator
+                for coordinator in coordinators
+            }
+            results = await asyncio.gather(
+                hon.async_restore_or_authorize(),
+                *(
+                    coordinator.async_config_entry_first_refresh()
+                    for coordinator in coordinators
+                ),
+                return_exceptions=True,
+            )
+            result = results[0]
+            if isinstance(result, BaseException):
+                raise result
+            # A refresh failure only matters for appliances the account still
+            # owns: one that was removed since the last boot must not block
+            # the whole entry (its coordinator is pruned below).
+            fresh_macs = {a.get("macAddress", "") for a in hon.appliances}
+            for coordinator, refresh_result in zip(
+                coordinators, results[1:], strict=True
+            ):
+                if (
+                    isinstance(refresh_result, BaseException)
+                    and coordinator.device.mac_address in fresh_macs
+                ):
+                    raise refresh_result
+        else:
+            result = await hon.async_restore_or_authorize()
+    except (ConfigEntryAuthFailed, ConfigEntryNotReady):
+        raise
     except HonConnectionError as err:
         raise ConfigEntryNotReady(f"hOn connection failed: {err}") from err
     except HonAuthenticationError as err:
@@ -134,22 +184,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: HonConfigEntry) -> bool:
     # Log the appliance count only (MAC addresses are identifiers)
     _LOGGER.debug("Appliances loaded: %d", len(hon.appliances))
 
-    entry.runtime_data = hon
-
-    # Warm boots reuse the persisted command catalogues and statistics so
-    # only the live device contexts block the setup.
-    await hon.async_load_setup_cache()
-
-    # Load every appliance context in parallel to keep the boot fast.
-    coordinators = [
-        await hon.async_get_coordinator(appliance) for appliance in hon.appliances
-    ]
+    # Reconcile with the fresh appliance list: preloaded appliances get their
+    # payload refreshed in place, the others (cold boot, or new since the
+    # last boot) block on a full first refresh, removed ones are pruned.
+    to_refresh = []
+    for appliance in hon.appliances:
+        coordinator = preloaded.get(appliance.get("macAddress", ""))
+        if coordinator is not None:
+            coordinator.apply_appliance_update(appliance)
+        else:
+            to_refresh.append(await hon.async_get_coordinator(appliance))
     await asyncio.gather(
-        *(
-            coordinator.async_config_entry_first_refresh()
-            for coordinator in coordinators
-        )
+        *(coordinator.async_config_entry_first_refresh() for coordinator in to_refresh)
     )
+    hon.prune_coordinators({a.get("macAddress", "") for a in hon.appliances})
+    hon.store_cached_appliances()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

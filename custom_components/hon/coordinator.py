@@ -59,6 +59,16 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
         """Return the device managed by this coordinator."""
         return self._device
 
+    def apply_appliance_update(self, appliance: dict[str, Any]) -> None:
+        """Refresh the appliance payload with the fresh cloud copy.
+
+        On a warm boot the coordinator is built from the cached appliance
+        list; once the live list arrives the payload is updated in place so
+        the device (which shares the dict) sees the fresh values.
+        """
+        self._appliance.clear()
+        self._appliance.update(appliance)
+
     @property
     def unique_id_prefix(self) -> str:
         """Return the stable per-entry prefix for entity unique ids."""
