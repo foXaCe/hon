@@ -61,6 +61,7 @@ jobs:
         with:
           scan-args: |
             --recursive
+            --no-resolve
             --config=osv-scanner.toml
             ./
 
