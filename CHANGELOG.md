@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-08-11
+
+### Performance
+
+- Config entry setup ~61% faster (≈3.4s → ≈1.3s) on a warm boot. Each
+  appliance's command catalogue and statistics are persisted in a store keyed
+  by firmware and app version, so only the live requests block the setup; the
+  cached payloads are refreshed in the background afterwards. A firmware
+  change (or an integration app-version bump) invalidates the cache and falls
+  back to the blocking fetch.
+- The appliance list is persisted too, so a warm boot probes the stored
+  session and fetches the device contexts concurrently instead of waiting for
+  the fresh list. The probe result then reconciles it: an appliance added
+  since the last boot gets a blocking first refresh, a removed one is pruned
+  and never blocks the entry.
+- Dropped the `python-dateutil` requirement (its only use is now covered by
+  Home Assistant's own datetime helpers), so HA no longer resolves it at
+  startup.
+
+### Fixed
+
+- After a re-authentication, a retried request kept sending the auth headers
+  captured when the call started — that is, the stale tokens. They are now
+  rebuilt on every attempt.
+- Concurrent requests hitting an expired session no longer each trigger their
+  own login: re-authentication is serialized and deduplicated, so the losers
+  of the race retry with the tokens the winner obtained.
+- Loading the command catalogue no longer fails on payloads that omit
+  `dictionaryId`.
+
 ## [0.9.3] - 2026-08-10
 
 ### Fixed
