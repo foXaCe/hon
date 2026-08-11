@@ -87,7 +87,7 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
                 self.config_entry.async_create_background_task(
                     self.hass,
                     self._async_refresh_setup_cache(),
-                    f"hon deferred setup refresh {device.mac_address}",
+                    f"hon deferred setup refresh {device.appliance_type}",
                 )
         else:
             commands, statistics, _ = await asyncio.gather(
@@ -118,8 +118,11 @@ class HonBaseCoordinator(DataUpdateCoordinator[HonDevice]):
                 device.load_statistics(),
             )
         except (aiohttp.ClientError, TimeoutError, HonError) as err:
+            # Log the appliance type only (MAC addresses are identifiers).
             _LOGGER.debug(
-                "Deferred setup refresh failed for %s: %s", device.mac_address, err
+                "Deferred setup refresh failed for device type [%s]: %s",
+                device.appliance_type,
+                err,
             )
             return
         self._hon.store_setup_cache(
