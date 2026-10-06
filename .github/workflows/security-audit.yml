@@ -42,7 +42,7 @@ jobs:
 
       - name: Audit requirements_dev / test
         run: |
-          # PYSEC-2026-4140..4152 : PyJWT 2.13.0, epingle par homeassistant
+          # PYSEC-2026-4140..4152 + CVE-2026-102275 : PyJWT 2.13.0, epingle par homeassistant
           # (PyJWT==2.13.0 dans toutes les versions publiees, 2026.9.4 incluse)
           # et accessible ici via pytest-homeassistant-custom-component. Le fixe
           # est PyJWT 2.15.0, impossible tant que HA epingle 2.13.0. Dependance
@@ -67,7 +67,8 @@ jobs:
                 --ignore-vuln PYSEC-2026-4149 \
                 --ignore-vuln PYSEC-2026-4150 \
                 --ignore-vuln PYSEC-2026-4151 \
-                --ignore-vuln PYSEC-2026-4152
+                --ignore-vuln PYSEC-2026-4152 \
+                --ignore-vuln CVE-2026-102275
             fi
           done
 
