@@ -32,7 +32,7 @@
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
   "dependencyDashboard": true,
-  "dependencyDashboardTitle": "📦 Renovate Dependency Dashboard",
+  "dependencyDashboardTitle": "\ud83d\udce6 Renovate Dependency Dashboard",
   "dependencyDashboardLabels": [
     "dependencies",
     "dashboard"
@@ -170,6 +170,15 @@
       "matchPackageNames": [
         "/^pytest/"
       ]
+    },
+    {
+      "description": "Tout ce qui monte se fusionne seul quand la CI est verte (op\u00e9rateur, 2026-10-14)",
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "automerge": true,
+      "platformAutomerge": true
     }
   ],
   "ignorePaths": [
@@ -178,5 +187,6 @@
     "**/venv/**",
     "**/__pycache__/**",
     "**/.tox/**"
-  ]
+  ],
+  "rollbackPrs": false
 }
