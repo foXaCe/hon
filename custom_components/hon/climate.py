@@ -36,64 +36,80 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities) -> Non
 
     platform.async_register_entity_service(
         "climate_set_sleep_mode",
-        {
-            vol.Required("sleep_mode"): cv.boolean,
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required("sleep_mode"): cv.boolean,
+            }
+        ),
         "async_set_sleep_mode",
     )
 
     platform.async_register_entity_service(
         "climate_set_screen_display",
-        {
-            vol.Required("screen_display"): cv.boolean,
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required("screen_display"): cv.boolean,
+            }
+        ),
         "async_set_screen_display",
     )
 
     platform.async_register_entity_service(
         "climate_set_echo_mode",
-        {
-            vol.Required("echo_mode"): cv.boolean,
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required("echo_mode"): cv.boolean,
+            }
+        ),
         "async_set_echo_mode",
     )
 
     platform.async_register_entity_service(
         "climate_set_rapid_mode",
-        {
-            vol.Required("rapid_mode"): cv.boolean,
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required("rapid_mode"): cv.boolean,
+            }
+        ),
         "async_set_rapid_mode",
     )
 
     platform.async_register_entity_service(
         "climate_set_silent_mode",
-        {
-            vol.Required("silent_mode"): cv.boolean,
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required("silent_mode"): cv.boolean,
+            }
+        ),
         "async_set_silent_mode",
     )
 
     platform.async_register_entity_service(
         "climate_set_wind_direction_vertical",
-        {
-            vol.Required("value"): cv.positive_int,
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required("value"): cv.positive_int,
+            }
+        ),
         "async_set_wind_direction_vertical",
     )
 
     platform.async_register_entity_service(
         "climate_set_wind_direction_horizontal",
-        {
-            vol.Required("value"): cv.positive_int,
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required("value"): cv.positive_int,
+            }
+        ),
         "async_set_wind_direction_horizontal",
     )
 
     platform.async_register_entity_service(
         "climate_set_eco_pilot_mode",
-        {
-            vol.Required("value"): cv.positive_int,
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required("value"): cv.positive_int,
+            }
+        ),
         "async_set_eco_pilot_mode",
     )
