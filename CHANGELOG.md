@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-10-29
+
+### Fixed
+
+- No more deprecation warning about `CONN_CLASS_LOCAL_POLL` at startup: the config flow no longer declares the obsolete `CONNECTION_CLASS` (the constant goes away in Home Assistant 2027.5).
+
+### Changed
+
+- Development dependencies updated (ruff, pytest-homeassistant-custom-component).
+
 ## [0.9.4] - 2026-08-11
 
 ### Performance

@@ -9,5 +9,5 @@
   "issue_tracker": "https://github.com/foXaCe/hon/issues",
   "loggers": ["custom_components.hon"],
   "requirements": [],
-  "version": "0.9.4"
+  "version": "0.9.5"
 }
