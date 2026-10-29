@@ -9,7 +9,6 @@ import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import (
-    CONN_CLASS_LOCAL_POLL,
     ConfigFlowResult,
 )
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
@@ -40,7 +39,6 @@ class HonFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
 
     VERSION = 2
-    CONNECTION_CLASS = CONN_CLASS_LOCAL_POLL
 
     def __init__(self):
         """Initialize the flow handler."""
