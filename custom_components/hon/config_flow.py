@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.config_entries import (
-    ConfigFlowResult,
-)
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import callback
 from homeassistant.helpers import selector
@@ -31,6 +28,9 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigFlowResult
 
 _LOGGER = logging.getLogger(__name__)
 
