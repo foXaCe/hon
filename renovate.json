@@ -31,12 +31,11 @@
   "rebaseWhen": "auto",
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
-  "dependencyDashboard": true,
-  "dependencyDashboardTitle": "\ud83d\udce6 Renovate Dependency Dashboard",
-  "dependencyDashboardLabels": [
-    "dependencies",
-    "dashboard"
-  ],
+  "dependencyDashboard": {
+    "enabled": true,
+    "title": "📦 Renovate Dependency Dashboard",
+    "labels": ["dependencies", "dashboard"]
+  },
   "configMigration": true,
   "vulnerabilityAlerts": {
     "labels": [
@@ -172,7 +171,7 @@
       ]
     },
     {
-      "description": "Tout ce qui monte se fusionne seul quand la CI est verte (op\u00e9rateur, 2026-10-14)",
+      "description": "Tout ce qui monte se fusionne seul quand la CI est verte (opérateur, 2026-10-14)",
       "matchUpdateTypes": [
         "minor",
         "major"
